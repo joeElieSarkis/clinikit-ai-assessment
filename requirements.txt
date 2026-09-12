@@ -1,0 +1,9 @@
+fastapi>=0.115,<1
+uvicorn>=0.34,<1
+pydantic>=2.10,<3
+openai>=1.68,<3
+python-dotenv>=1,<2
+dateparser>=1.2,<2
+tzdata>=2025.1
+httpx>=0.28,<1
+pytest>=8,<10

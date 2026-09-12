@@ -1,0 +1,15 @@
+node_modules/
+frontend/dist/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+.env
+.env.*
+!.env.example
+.sites-runtime/
+work/
+test-results/
+playwright-report/
+*.log
