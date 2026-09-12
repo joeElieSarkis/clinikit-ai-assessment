@@ -333,9 +333,7 @@ export default function App() {
                         }}
                       >
                         <ShieldCheck size={13} />
-                        {message.decision.action === 'ask_for_confirmation'
-                          ? 'Waiting for your confirmation'
-                          : 'View decision'}
+                        View decision
                         <ChevronRight size={12} />
                       </button>
                     )}

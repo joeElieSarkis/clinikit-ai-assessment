@@ -1,0 +1,347 @@
+{
+  "provider": "demo",
+  "model": null,
+  "reference_time": "2026-09-12T11:00:00+03:00",
+  "evaluated_at": "2026-09-12T12:19:54.387169+03:00",
+  "scope": "Ten supplied examples, each in a fresh fictional session. This is a smoke evaluation, not a general accuracy benchmark.",
+  "intent_matches": 10,
+  "cases": 10,
+  "unconfirmed_mutations": 0,
+  "results": [
+    {
+      "message": "Can I see Dr. George tomorrow afternoon?",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "George",
+          "preferred_date": "tomorrow",
+          "preferred_time": "afternoon",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "The requested date is outside clinic hours.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [
+          {
+            "name": "check_availability",
+            "result": "0 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "demo rules",
+        "duration_ms": 3
+      },
+      "response": "The sample clinic is closed on Sunday. Please choose another day; Monday to Saturday are available."
+    },
+    {
+      "message": "Move my appointment from Monday to Wednesday.",
+      "expected_intent": "reschedule",
+      "observed_intent": "reschedule",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "reschedule",
+        "entities": {
+          "doctor": "Karim",
+          "preferred_date": "wednesday",
+          "preferred_time": null,
+          "original_date": "monday",
+          "appointment_id": "CK-1042",
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "check_availability",
+        "reason": "The patient needs to choose a specific slot.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "The existing appointment belongs to the current sample session.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "find_appointment",
+            "result": "1 matching active appointment(s) in this sample session."
+          },
+          {
+            "name": "check_availability",
+            "result": "7 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "demo rules",
+        "duration_ms": 0
+      },
+      "response": "Here are available times with Dr. Karim. Choose a time to review the details; selecting it does not confirm the visit."
+    },
+    {
+      "message": "Cancel my appointment with Dr. Karim.",
+      "expected_intent": "cancel",
+      "observed_intent": "cancel",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": true,
+      "decision": {
+        "intent": "cancel",
+        "entities": {
+          "doctor": "Karim",
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": "CK-1042",
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_confirmation",
+        "reason": "Cancellation is staged; it has not been executed.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "The existing appointment belongs to the current sample session."
+        ],
+        "tools": [
+          {
+            "name": "find_appointment",
+            "result": "1 matching active appointment(s) in this sample session."
+          }
+        ],
+        "source": "demo rules",
+        "duration_ms": 2
+      },
+      "response": "Please review the cancellation for CK-1042 below. Your visit is still confirmed until you choose ‘Confirm cancellation’."
+    },
+    {
+      "message": "What time does the clinic close?",
+      "expected_intent": "hours",
+      "observed_intent": "hours",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "hours",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "get_clinic_hours",
+        "reason": "Opening hours come from the configured sample clinic.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [
+          {
+            "name": "get_clinic_hours",
+            "result": "Our sample clinic is open Monday to Friday, 9 am–6 pm, and Saturday, 9 am–1 pm. We’re closed on Sunday. All times are in Beirut."
+          }
+        ],
+        "source": "demo rules",
+        "duration_ms": 0
+      },
+      "response": "Our sample clinic is open Monday to Friday, 9 am–6 pm, and Saturday, 9 am–1 pm. We’re closed on Sunday. All times are in Beirut."
+    },
+    {
+      "message": "Do you have anything available after 5 tomorrow?",
+      "expected_intent": "availability",
+      "observed_intent": "availability",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "availability",
+        "entities": {
+          "doctor": null,
+          "preferred_date": "tomorrow",
+          "preferred_time": "after 5",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "demo rules",
+        "duration_ms": 0
+      },
+      "response": "Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "I want to see my doctor again for the same problem.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "demo rules",
+        "duration_ms": 0
+      },
+      "response": "Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "Book me Friday at 4 but don’t confirm anything yet.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": "friday",
+          "preferred_time": "4",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "A request to wait prevents a confirmation proposal."
+        ],
+        "tools": [],
+        "source": "demo rules",
+        "duration_ms": 0
+      },
+      "response": "I won’t book anything yet. Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "I need an appointment sometime next week.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": "next week",
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "demo rules",
+        "duration_ms": 0
+      },
+      "response": "Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "Can somebody from the clinic call me?",
+      "expected_intent": "handoff",
+      "observed_intent": "handoff",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "handoff",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "handoff_to_human",
+        "reason": "Human assistance was requested or the message requires clinical judgment.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [
+          {
+            "name": "handoff_to_human",
+            "result": "Mock handoff H-001 recorded; no external message sent."
+          }
+        ],
+        "source": "local routing policy",
+        "duration_ms": 0
+      },
+      "response": "I’ve recorded a request for the reception team in this demo. No real person has been contacted and no callback has been arranged."
+    },
+    {
+      "message": "I might want to see Dr. George tomorrow at 4, but don’t book anything yet.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "George",
+          "preferred_date": "tomorrow",
+          "preferred_time": "4",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "The time must be unambiguous before it can be used.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "A request to wait prevents a confirmation proposal."
+        ],
+        "tools": [],
+        "source": "demo rules",
+        "duration_ms": 0
+      },
+      "response": "I won’t book anything yet. Did you mean 4:00 am or 4:00 pm? Please include am or pm."
+    }
+  ]
+}
