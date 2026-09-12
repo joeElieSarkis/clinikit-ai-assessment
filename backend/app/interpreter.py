@@ -11,7 +11,8 @@ from .clinic import DOCTORS
 from .models import Extraction, Message
 
 WEEKDAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
-DATE_PATTERN = rf"\b(?:\d{{4}}-\d{{2}}-\d{{2}}|day after tomorrow|tomorrow|today|yesterday|next week|(?:next |this )?(?:{WEEKDAYS}))\b"
+MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december"
+DATE_PATTERN = rf"\b(?:\d{{4}}-\d{{2}}-\d{{2}}|\d{{1,2}}/\d{{1,2}}(?:/\d{{2,4}})?|\d{{1,2}} (?:{MONTHS})(?: \d{{4}})?|(?:{MONTHS}) \d{{1,2}}(?:,? \d{{4}})?|day after tomorrow|tomorrow|today|yesterday|next week|(?:next |this )?(?:{WEEKDAYS}))\b"
 HOLD_PATTERN = r"\b(?:don'?t|do not|not yet|never|hold off|wait|just checking|just exploring|might|maybe|not sure|thinking about|not ready|before (?:i |you )?confirm)\b"
 
 
@@ -46,7 +47,7 @@ class DemoInterpreter:
             doctor = matches[0].title() if matches else named[1].title()
         elif names:
             doctor = names[0]
-        ref = re.search(r"\bck-\d+\b", t)
+        ref = re.search(r"\bck-[a-z0-9]{4,12}\b", t)
         time = None
         timed = re.search(r"\b(?:at|after|before|around|by)\s+(\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)", t)
         standalone = re.search(r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}:\d{2}\b", t)
@@ -60,6 +61,8 @@ class DemoInterpreter:
             time = "morning"
         elif "evening" in t:
             time = "evening"
+        elif re.search(r"\b(?:noon|midday|midnight)\b", t):
+            time = re.search(r"\b(?:noon|midday|midnight)\b", t)[0]
         if re.search(r"\b(human|person|receptionist|call me|call back|somebody.*call|someone.*call|speak.*team)\b", t):
             intent = "handoff"
         elif re.search(r"\b(chest pain|can't breathe|cannot breathe|emergency|bleeding|diagnos\w*|medication|prescri\w*|symptom\w*|medical advice|dose|painkiller)\b", t):
@@ -82,6 +85,8 @@ class DemoInterpreter:
         if t.startswith("use ") and intent == "availability":
             intent = "book"
         ambiguous = len(names) > 1 or bool(re.search(r"\b(?:or|either)\b", t) and (dates or time))
+        if re.search(r"\b(?:between|from)\s+\d.*\b(?:and|to)\s+\d", t):
+            ambiguous = True
         if len(dates) > 1 and not original_date:
             ambiguous = True
         if re.search(r"\b(cancel|remove)\b.*\b(and|also)\b.*\b(book|reschedule)\b", t):

@@ -14,7 +14,7 @@ from .interpreter import OpenAIInterpreter
 from .models import ChatRequest, ConfirmationRequest, SessionView
 
 ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(ROOT.parent / ".env")
+load_dotenv(ROOT / ".env")
 
 
 def create_app(engine: ReceptionEngine | None = None) -> FastAPI:
@@ -118,7 +118,7 @@ def create_app(engine: ReceptionEngine | None = None) -> FastAPI:
     def dismiss(session_id: str, body: ConfirmationRequest):
         return apply_confirmation(session_id, body, True)
 
-    built_ui = ROOT.parent / "frontend" / "dist"
+    built_ui = ROOT / "frontend" / "dist"
     if built_ui.is_dir():
         app.mount("/", StaticFiles(directory=built_ui, html=True), name="frontend")
     return app

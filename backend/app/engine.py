@@ -72,7 +72,13 @@ class ReceptionEngine:
             reply("I can help with clinic appointments, opening hours, or a request for a person. What would you like help with?", reason="Out-of-scope instructions are not clinic authority.")
             return
         try:
-            extracted = self.interpreter.extract(text, previous, s.messages[:-1], self.clock())
+            # Explicit handoff remains available during a language-provider outage.
+            local = DemoInterpreter().extract(text, None, [], self.clock())
+            if local.intent in ("handoff", "medical"):
+                extracted = local
+                source = "local routing policy"
+            else:
+                extracted = self.interpreter.extract(text, previous, s.messages[:-1], self.clock())
         except Exception:
             # Fail closed: never silently substitute demo rules for a failed live model.
             s.draft = None
@@ -138,6 +144,12 @@ class ReceptionEngine:
                     reply("Which appointment should be cancelled? Please provide its appointment reference.")
                     return
                 candidates = [a for a in candidates if a.date == dates[0].isoformat()]
+            if extracted.intent == "cancel" and extracted.preferred_time:
+                _, matches_time, err = resolve_time(extracted.preferred_time)
+                if err:
+                    reply(err)
+                    return
+                candidates = [a for a in candidates if matches_time(a.time)]
             tools.append(ToolResult(name="find_appointment", result=f"{len(candidates)} matching active appointment(s) in this sample session."))
             if len(candidates) != 1:
                 reply("I couldn’t identify one matching visit. Please use an appointment reference from ‘Your next visits’, such as CK-1042.", reason="An exact, session-owned appointment is required.")

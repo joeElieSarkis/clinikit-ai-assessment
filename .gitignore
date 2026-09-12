@@ -13,3 +13,4 @@ work/
 test-results/
 playwright-report/
 *.log
+*.tsbuildinfo
