@@ -19,9 +19,11 @@ Checked through the local browser against the running React and Python services:
 - Cancellation requires its explicit confirmation and marks the selected visit cancelled.
 - Decision log displays actual structured fields, checks, and mock-tool results.
 - Escape closes the modal, and reset asks before switching sample sessions.
+- At 390 × 844, the composer is within the first viewport and the document has no horizontal overflow. The mobile visit disclosure exposes the same live appointment state.
+- A held booking enquiry shows available times while the proposal remains null and the existing appointment remains unchanged.
 - Optional WebMCP `read_reception_state` returns the visible sample state, rejects unexpected arguments, and has no mutation capability.
 
-Responsive checks cover desktop and mobile layouts. These checks are not a formal accessibility audit or proof of universal browser compatibility.
+Responsive checks cover 1440 × 900 desktop and 390 × 844 mobile layouts. These checks are not a formal accessibility audit or proof of universal browser compatibility.
 
 ## Known limits
 
