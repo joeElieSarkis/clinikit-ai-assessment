@@ -217,6 +217,14 @@ export default function App() {
   const decisions = session?.messages.filter((m) => m.decision) ?? [];
   const today = session?.now.slice(0, 10);
   const hasConversation = (session?.messages.length ?? 0) > 1;
+  const liveModel = session?.mode === 'gemini' || session?.mode === 'openai';
+  const modeLabel = !session
+    ? 'Connecting'
+    : session.mode === 'gemini'
+      ? 'Gemini'
+      : session.mode === 'openai'
+        ? 'OpenAI'
+        : 'Offline demo';
 
   return (
     <div className="app-shell">
@@ -260,9 +268,7 @@ export default function App() {
             CliniKit <span>/</span> Reception
           </div>
           <div className="topbar-actions">
-            <span className="mode-badge">
-              {session?.mode === 'openai' ? 'LLM mode' : 'Demo mode'}
-            </span>
+            <span className="mode-badge">{modeLabel}</span>
             <button
               className="icon-button"
               aria-label="About this demo"
@@ -672,13 +678,13 @@ export default function App() {
               Reception can find appointment times, prepare a booking, reschedule or cancel a visit,
               explain opening hours, and record a mock request for a human.
             </p>
-            <h3>{session?.mode === 'openai' ? 'LLM mode' : 'Demo mode'}</h3>
+            <h3>{modeLabel}</h3>
             <p>
-              {session?.mode === 'openai'
-                ? `Messages are interpreted by ${session.model}. Python validates the result and controls every action. Sample conversation text is sent to OpenAI.`
-                : 'An offline, rule-based interpreter supports the sample English requests. It is deliberately limited; the optional LLM mode handles more varied language.'}
+              {liveModel
+                ? `Messages are interpreted by ${session?.model}. Python checks the clinic schedule, controls appointment changes, and writes replies from verified results. Sample conversation text is sent to ${session?.mode === 'gemini' ? 'Google Gemini' : 'OpenAI'}. Use fictional patient information only.`
+                : 'The offline demo uses a limited rule-based interpreter. It makes no model API calls. Select and configure a live provider to evaluate language understanding.'}
             </p>
-            <h3>Built with intention</h3>
+            <h3>How appointments are handled</h3>
             <p>
               React + TypeScript · Python + FastAPI. Appointment changes require an explicit
               confirmation tied to the exact proposed visit. Use the decision log to inspect the

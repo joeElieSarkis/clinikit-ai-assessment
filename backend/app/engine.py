@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from .clinic import DOCTORS, HOURS, check_availability, describe, is_available, now_local, seed_appointments
 from .dates import resolve_dates, resolve_time
+from .gemini import GeminiUnavailable
 from .interpreter import DemoInterpreter, has_hold, normalize
 from .models import Appointment, Decision, Extraction, Message, Proposal, SessionView, Slot, ToolResult
 
@@ -60,14 +61,17 @@ class ReceptionEngine:
 
         t = normalize(text)
         if re.fullmatch(r"(?:never mind|nevermind|forget it|stop|cancel that|leave it|keep as is)[.! ]*", t):
+            source = "local routing policy"
             s.draft = None
             reply("Of course. I’ve cleared that request. Your appointments are unchanged.", "clear_request", "The patient stopped the draft request.")
             return
         if re.fullmatch(r"(?:yes|yeah|yep|ok|okay|sure|confirm|go ahead|do it|yes please)[.! ]*", t):
+            source = "local routing policy"
             s.draft = previous
             reply("To change an appointment, please select a specific time again and use its confirmation button. A message like ‘yes’ doesn’t change your visits.", reason="Free-text acknowledgement cannot authorize a mutation.")
             return
         if re.search(r"ignore (?:all |previous |the )*(?:instructions|rules)|system prompt|developer message|<\/?system>|execute.*(?:sql|code)", t):
+            source = "local routing policy"
             s.draft = None
             reply("I can help with clinic appointments, opening hours, or a request for a person. What would you like help with?", reason="Out-of-scope instructions are not clinic authority.")
             return
@@ -79,11 +83,17 @@ class ReceptionEngine:
                 source = "local routing policy"
             else:
                 extracted = self.interpreter.extract(text, previous, s.messages[:-1], self.clock())
-        except Exception:
+        except Exception as error:
             # Fail closed: never silently substitute demo rules for a failed live model.
             s.draft = None
             checks.append("Interpretation failed; no proposed action or appointment mutation remains.")
-            reply("I couldn’t reliably understand that request because the language service is unavailable. Your appointments are unchanged. Please try again, or ask for a person.", "service_unavailable", "The interpreter failed or did not return validated data.")
+            if isinstance(error, GeminiUnavailable):
+                checks.append(f"Provider failure category: {error.code}.")
+            if isinstance(error, GeminiUnavailable) and error.code == "rate_limited":
+                reply("The language service is receiving too many requests or has reached its quota. Your appointments are unchanged. Please wait a minute before trying again. If it continues, try later or ask for a person.",
+                      "service_unavailable", "A local request limit or provider quota prevented interpretation; no automatic retry was made.")
+            else:
+                reply("I couldn’t reliably understand that request because the language service is unavailable. Your appointments are unchanged. Please try again, or ask for a person.", "service_unavailable", "The interpreter failed or did not return validated data.")
             return
         if extracted.intent in ("book", "reschedule", "cancel", "availability") and previous:
             compatible = extracted.intent == previous.intent or (previous.intent == "availability" and extracted.intent == "book")

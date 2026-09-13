@@ -1,7 +1,11 @@
 from datetime import datetime
+import os
 
 import pytest
 from fastapi.testclient import TestClient
+
+# Unit tests never enable a real provider from a developer's .env file.
+os.environ["AI_PROVIDER"] = "demo"
 
 from backend.app.clinic import TIMEZONE
 from backend.app.engine import ReceptionEngine

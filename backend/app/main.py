@@ -11,8 +11,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .engine import ReceptionEngine
-from .interpreter import OpenAIInterpreter
 from .models import ChatRequest, ConfirmationRequest, SessionView
+from .providers import create_interpreter
 
 ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT / ".env")
@@ -20,17 +20,9 @@ load_dotenv(ROOT / ".env")
 
 def create_app(engine: ReceptionEngine | None = None) -> FastAPI:
     if engine is None:
-        mode = os.getenv("AI_PROVIDER", "demo").strip().lower()
-        if mode not in ("demo", "openai"):
-            raise RuntimeError("AI_PROVIDER must be demo or openai")
-        model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini") if mode == "openai" else None
-        if mode == "openai":
-            key = os.getenv("OPENAI_API_KEY", "")
-            if not key:
-                raise RuntimeError("AI_PROVIDER=openai requires OPENAI_API_KEY in the root .env file")
-            engine = ReceptionEngine(OpenAIInterpreter(key, model), mode=mode, model=model)
-        else:
-            engine = ReceptionEngine()
+        mode = os.getenv("AI_PROVIDER", "gemini").strip().lower()
+        interpreter = create_interpreter(mode)
+        engine = ReceptionEngine(interpreter, mode=mode, model=getattr(interpreter, "model", None))
     app = FastAPI(title="CliniKit reception", version="0.1.0")
     sessions = {}
     registry_lock = RLock()
