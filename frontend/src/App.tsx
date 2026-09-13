@@ -125,7 +125,7 @@ export default function App() {
       setDraft('');
       sessionStorage.setItem('reception-session', fresh.id);
     } catch {
-      setError('The reception service is unavailable. Start the Python server, then retry.');
+      setError('Reception is starting or temporarily unavailable. Please try again in a moment.');
     } finally {
       setBusy(false);
     }
@@ -664,7 +664,7 @@ export default function App() {
           <>
             <h2>Care in the details.</h2>
             <p>
-              This is a local prototype for Part 1 of the CliniKit AI trainee assessment. All clinic
+              This is a prototype for Part 1 of the CliniKit AI trainee assessment. All clinic
               details, patient records, and appointments are fictional.
             </p>
             <h3>One conversation. Clear next steps.</h3>

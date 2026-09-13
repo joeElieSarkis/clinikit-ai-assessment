@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: clinikit-reception
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    envVars:
+      - key: AI_PROVIDER
+        value: demo

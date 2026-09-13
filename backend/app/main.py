@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from threading import RLock
 from time import monotonic
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
@@ -35,13 +36,22 @@ def create_app(engine: ReceptionEngine | None = None) -> FastAPI:
     registry_lock = RLock()
     app.state.sessions = sessions
     app.state.engine = engine
+    allowed_origins = {"http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:8000", "http://localhost:8000"}
+    for variable in ("PUBLIC_ORIGIN", "RENDER_EXTERNAL_URL"):
+        value = os.getenv(variable, "").strip()
+        if not value:
+            continue
+        parsed = urlsplit(value)
+        if (parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username
+                or parsed.password or parsed.path not in ("", "/") or parsed.query or parsed.fragment):
+            raise RuntimeError(f"{variable} must be an http(s) origin, such as https://your-app.onrender.com")
+        allowed_origins.add(f"{parsed.scheme}://{parsed.netloc}")
 
     @app.middleware("http")
     async def local_origin(request: Request, call_next):
         origin = request.headers.get("origin")
-        allowed = {"http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:8000", "http://localhost:8000"}
-        if request.method == "POST" and origin and origin not in allowed:
-            return JSONResponse(status_code=403, content={"detail": "This local demo does not accept requests from that origin."})
+        if request.method == "POST" and origin and origin not in allowed_origins:
+            return JSONResponse(status_code=403, content={"detail": "This demo does not accept requests from that origin."})
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         if request.url.path.startswith("/api"):
