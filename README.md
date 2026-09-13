@@ -4,7 +4,7 @@ A clinic appointment assistant for **Exercise 1** of the CliniKit AI trainee ass
 
 The central design choice: **understanding a request does not authorize an appointment change**. The assistant extracts structured information, validates it against a mock schedule, and prepares a proposal. Only an explicit confirmation of that exact proposal can create, move, or cancel a visit.
 
-All patients, doctors, clinic hours, appointments, and handoffs are fictional. This is a local demonstration. Exercise 2 is not included.
+All patients, doctors, clinic hours, appointments, and handoffs are fictional. This is an assessment demonstration. Exercise 2 is not included.
 
 ## Run locally
 
@@ -40,6 +40,14 @@ npm --prefix frontend run build
 ```
 
 Then open http://127.0.0.1:8000. Build before starting the server.
+
+## Share a free hosted demo
+
+The repository includes a Docker build and a Render configuration for **one Free web service** serving both the React interface and Python API. The default `AI_PROVIDER=demo` makes no external model calls. No paid database or other service is configured.
+
+Follow [deployment.md](docs/deployment.md) after pushing your repository yourself. GitHub Pages can host static frontend files, but cannot run this project's Python API on its own. Render's free service sleeps after inactivity, so the first visit can take about a minute to load; sample sessions reset when the server restarts.
+
+**Deployment status:** prepared and checked locally; no public deployment has been created or verified.
 
 ## Enable the language model
 
@@ -78,7 +86,7 @@ npm --prefix frontend run build
 npm --prefix frontend run format:check
 ```
 
-- **61 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, and provider failures.
+- **67 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, provider failures, hosted origins, and serving the built interface.
 - **10/10 supplied example intents matched** in demo mode; **0 unconfirmed appointment mutations**. Full responses and traces are in [demo-results.json](docs/demo-results.json). These hand-picked examples are a smoke evaluation, not a general accuracy estimate.
 - Browser checks cover booking, rescheduling, cancellation, dialogs, and responsive layouts. Details and limitations are in [validation.md](docs/validation.md).
 - Two upstream deprecation warnings occur in the Starlette testing dependencies; the tests pass.

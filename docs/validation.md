@@ -1,14 +1,22 @@
 # Validation record
 
-Validated locally on 12 September 2026. The Python suite uses a fixed reference time of **2026-09-12 11:00, Asia/Beirut**. The browser uses real local time.
+Browser checks were completed locally on 12 September 2026; automated checks were extended for hosting on 13 September 2026. The Python suite uses a fixed reference time of **2026-09-12 11:00, Asia/Beirut**. The browser uses real local time.
 
 ## Automated checks
 
-- 61 backend tests pass. This includes all ten supplied example messages, typed API input, state transitions, repeated requests, session ownership, expired/stale proposals, availability rechecks, conflicting appointment times, holds, and unavailable model handling.
+- 67 backend tests pass. This includes all ten supplied example messages, typed API input, state transitions, repeated requests, session ownership, expired/stale proposals, availability rechecks, conflicting appointment times, holds, unavailable model handling, and hosting checks.
 - Ten supplied example intents match in offline demo evaluation. None changes an appointment without confirmation. Full observed responses and decision records are in `demo-results.json`.
 - The frontend passes TypeScript checking and a Vite production build.
 - The OpenAI adapter contract is tested with a mock client. **No live OpenAI requests were tested because no API key was configured.** The ten-example demo result must not be presented as an LLM benchmark.
 - The testing dependencies emit two upstream deprecation warnings. No failing tests were suppressed.
+
+## Hosting checks
+
+- A simulated Render origin can create a session and complete an opening-hours conversation through the API. An unrelated origin is rejected.
+- A configured custom origin works alongside local development; wildcard origins, paths, and embedded credentials are rejected.
+- With the frontend built, the Python application serves the page, its JavaScript asset, and the health endpoint. Requests for `.env` and backend source files return 404.
+- The repository includes a Docker build and a Render Free service configuration. Docker is not installed on the development laptop, so the container image has **not** been built or run locally. The frontend build and Python application have been tested separately.
+- No public deployment, cold start, or hosted browser flow has been verified. The deployment guide lists these remaining checks.
 
 ## Browser checks
 
