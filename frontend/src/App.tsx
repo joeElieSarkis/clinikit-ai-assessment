@@ -237,19 +237,19 @@ export default function App() {
         <div className="brand-statement">
           <span className="small-cross">✳</span>
           <p>
-            A little less admin.
+            Manage your
             <br />
-            <em>A little more care.</em>
+            appointments.
           </p>
           <div className="brand-rule" />
           <span>
-            Your next visit
+            Book a visit or update an
             <br />
-            starts with a conversation.
+            existing appointment.
           </span>
         </div>
         <button className="brand-about" onClick={() => setDialog('about')}>
-          About this experience
+          About this demo
           <ArrowUpRight size={16} />
         </button>
       </aside>
@@ -265,7 +265,7 @@ export default function App() {
             </span>
             <button
               className="icon-button"
-              aria-label="About this experience"
+              aria-label="About this demo"
               onClick={() => setDialog('about')}
             >
               <CircleHelp size={17} />
@@ -285,7 +285,7 @@ export default function App() {
             <div className="conversation-heading">
               <div>
                 <div className="eyebrow">VIRTUAL RECEPTION</div>
-                <h1>A warm welcome.</h1>
+                <h1>How can we help?</h1>
               </div>
               <span className="reception-symbol" aria-hidden="true">
                 ✳
@@ -301,13 +301,13 @@ export default function App() {
               {!hasConversation && (
                 <div className="welcome">
                   <h2>
-                    Let’s find a time
+                    Book or manage
                     <br />
-                    that works <em>for you.</em>
+                    an appointment.
                   </h2>
                   <p>
-                    Book a visit, change your plans, or ask a question.
-                    <br className="desktop-break" /> We’ll take it one step at a time.
+                    Tell us which doctor you’d like to see,
+                    <br className="desktop-break" /> or ask about an existing appointment.
                   </p>
                 </div>
               )}
@@ -546,16 +546,16 @@ export default function App() {
                   ))}
                 {session && !session.appointments.some((a) => a.status === 'confirmed') && (
                   <p className="empty-visits">
-                    A little space in your calendar.
+                    You have no upcoming appointments.
                     <br />
-                    Your next visit will appear here.
+                    Confirmed visits will appear here.
                   </p>
                 )}
                 <span className="demo-note">Sample patient · appointments are simulated</span>
               </section>
               <section className="clinic-details">
                 <span className="eyebrow">GOOD TO KNOW</span>
-                <h2>Here when you need us.</h2>
+                <h2>Opening hours</h2>
                 <div className="hours">
                   <Clock3 size={17} />
                   <div>
@@ -662,12 +662,12 @@ export default function App() {
         )}
         {dialog === 'about' && (
           <>
-            <h2>Care in the details.</h2>
+            <h2>About this demo</h2>
             <p>
               This is a prototype for Part 1 of the CliniKit AI trainee assessment. All clinic
               details, patient records, and appointments are fictional.
             </p>
-            <h3>One conversation. Clear next steps.</h3>
+            <h3>What reception can do</h3>
             <p>
               Reception can find appointment times, prepare a booking, reschedule or cancel a visit,
               explain opening hours, and record a mock request for a human.
