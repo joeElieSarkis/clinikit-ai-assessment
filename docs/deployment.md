@@ -13,8 +13,8 @@ This project needs its Python API for conversations, proposals, confirmations, a
 1. Push this project to your own GitHub repository. The repository root should contain `Dockerfile`, `render.yaml`, `backend`, and `frontend`. Exclude `.env`, `.venv`, `node_modules`, and `work`; the supplied `.gitignore` already does this. No push is performed by the local setup.
 2. Create a free account at [Render](https://dashboard.render.com/). Keep the free workspace plan and do not add a payment method. If the account requires payment verification or an upgrade to continue, stop and reassess the hosting choice.
 3. Choose **New → Blueprint**, connect the GitHub repository, and select the branch containing `render.yaml`.
-4. Review the generated resources before deploying: exactly one web service named `clinikit-reception`, Docker runtime, **Free** instance, Frankfurt region, and `AI_PROVIDER=demo`. No database, disk, or paid service is needed.
-5. Deploy the blueprint. Render builds the frontend and starts the Python server. The service dashboard provides its public `onrender.com` URL after a successful deployment; use the actual URL shown there.
+4. Review the generated resources before deploying: exactly one web service named `clinikit-reception`, Docker runtime, **Free** instance, Frankfurt region, and `AI_PROVIDER=gemini`. Supply `GEMINI_API_KEY` from a Google project on the Free tier when the blueprint prompts for the secret. Keep `GEMINI_MODEL=gemini-2.5-flash`. No database, disk, or paid service is needed.
+5. Deploy the blueprint after the [local Gemini checks](gemini.md) pass. Render builds the frontend and starts the Python server. The service dashboard provides its public `onrender.com` URL after a successful deployment; use the actual URL shown there.
 6. Complete the browser checks below before adding that link to a submission.
 
 The included [Blueprint configuration](https://render.com/docs/blueprint-spec) disables automatic deployment after later pushes. To publish an update, push it yourself and use **Manual Deploy → Deploy latest commit** in the service dashboard.
@@ -22,7 +22,8 @@ The included [Blueprint configuration](https://render.com/docs/blueprint-spec) d
 ## Keep it free
 
 - Use the **Free** instance and the free workspace plan. Do not add paid services or a payment method.
-- Leave `AI_PROVIDER=demo`. This bounded rule interpreter makes no model API calls. The optional OpenAI adapter is a separate feature that may incur API charges and is not enabled by this deployment.
+- Keep the Gemini key's Google project on the **Free tier with billing disabled**. Gemini usage is separate from Render hosting; the key inherits its Google project's billing tier. See [Gemini setup](gemini.md). The optional OpenAI adapter may incur charges and is not enabled by this deployment.
+- To deliberately demonstrate the offline baseline, set `AI_PROVIDER=demo` in Render. It makes no model API calls and is labeled **Offline demo**. It does not demonstrate live Gemini understanding.
 - Use the supplied `onrender.com` address; purchasing a domain is unnecessary.
 - [Render's free limits](https://render.com/docs/free) include 750 instance hours per workspace per month, shared by its free web services. Bandwidth and build usage also have limits. Without a payment method, exceeding those limits suspends services or disables builds instead of billing for extra usage.
 - After 15 minutes without traffic, the service sleeps. A new visit wakes it, which usually takes about one minute. No uptime guarantee is implied.
@@ -39,8 +40,8 @@ Appointments and sessions are intentionally held in memory. Sleeping, restarting
 
 ## Check the deployed link
 
-1. Open the public URL in a private browser window. Allow the initial wake-up to finish. Confirm the interface shows **Demo mode**.
-2. Visit `/api/health` on that same domain and confirm the status is `ok`.
+1. Open the public URL in a private browser window. Allow the initial wake-up to finish. Confirm the interface shows **Gemini**.
+2. Visit `/api/health` on that same domain and confirm the status is `ok` and mode is `gemini`. This reports configuration, not successful Google access; the next conversation checks verify the connection.
 3. Ask opening hours. Book an available weekday slot, confirm it, then reschedule and cancel the sample appointment using the explicit confirmation controls.
 4. Send “I might want to see Dr. George tomorrow at 4, but don't book anything yet.” Confirm no appointment changes without approval; the response can ask for clarification or explain a closed date.
 5. Open the site on a phone and check the composer and visit disclosure. Refresh during an active session and check it still loads.

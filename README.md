@@ -1,14 +1,30 @@
 # Reception / CliniKit
 
-A clinic appointment assistant for **Exercise 1** of the CliniKit AI trainee assessment. React + TypeScript on the patient side; Python + FastAPI behind the conversation.
+A clinic appointment assistant for **Exercise 1** of the CliniKit AI trainee assessment. React + TypeScript on the patient side; Python + FastAPI and Gemini for intent and entity extraction.
 
 The central design choice: **understanding a request does not authorize an appointment change**. The assistant extracts structured information, validates it against a mock schedule, and prepares a proposal. Only an explicit confirmation of that exact proposal can create, move, or cancel a visit.
 
 All patients, doctors, clinic hours, appointments, and handoffs are fictional. This is an assessment demonstration. Exercise 2 is not included.
 
+## Connect Gemini
+
+The live configuration uses **Gemini 2.5 Flash**. Create a key in [Google AI Studio](https://aistudio.google.com/apikey) using a project on the **Free tier with billing disabled**. Copy `.env.example` to `.env` once and fill in:
+
+```dotenv
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-own-key
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Follow [gemini.md](docs/gemini.md) for setup and live checks. The backend sends the current fictional message, active draft, and up to eight recent messages to Google. The API key remains on the server and `.env` is excluded from Git and the Docker image. Google lists free input/output usage for this model, with account quotas and free-tier data-use terms; use only fictional patient information. See [pricing](https://ai.google.dev/gemini-api/docs/pricing) and [billing](https://ai.google.dev/gemini-api/docs/billing).
+
+Gemini interprets intent and entities. Python validates the schedule, controls changes, and constructs replies from verified results. A missing key is a setup error; a provider failure never silently switches to rules. **A live Gemini evaluation is still pending a real key.**
+
+For an explicit offline baseline, set `AI_PROVIDER=demo` in `.env`. It requires no API key, shows **Offline demo**, and has limited English rule matching. Its results are not an LLM benchmark.
+
 ## Run locally
 
-Requirements: **Python 3.11+**, **Node.js 22.12+** (tested with Python 3.12 and Node 22.18), and npm. No API key is needed for demo mode.
+Requirements: **Python 3.11+**, **Node.js 22.12+** (tested with Python 3.12 and Node 22.18), and npm. Configure `.env` above before starting the server.
 
 From the repository root, on Windows PowerShell:
 
@@ -43,15 +59,15 @@ Then open http://127.0.0.1:8000. Build before starting the server.
 
 ## Share a free hosted demo
 
-The repository includes a Docker build and a Render configuration for **one Free web service** serving both the React interface and Python API. The default `AI_PROVIDER=demo` makes no external model calls. No paid database or other service is configured.
+The repository includes a Docker build and a Render configuration for **one Free web service** serving both the React interface and Python API. It sets `AI_PROVIDER=gemini` and prompts for `GEMINI_API_KEY` as a server secret. Use a Free-tier Google project; selecting a model in code does not control account billing. No paid database or other service is configured.
 
 Follow [deployment.md](docs/deployment.md) after pushing your repository yourself. GitHub Pages can host static frontend files, but cannot run this project's Python API on its own. Render's free service sleeps after inactivity, so the first visit can take about a minute to load; sample sessions reset when the server restarts.
 
 **Deployment status:** prepared and checked locally; no public deployment has been created or verified.
 
-## Enable the language model
+## Optional alternative provider
 
-Copy `.env.example` to `.env` in the repository root. Set:
+The existing OpenAI adapter remains available for comparison. It is not part of the free Gemini setup. To use it, set these values in the root `.env`:
 
 ```dotenv
 AI_PROVIDER=openai
@@ -59,7 +75,7 @@ OPENAI_API_KEY=your-own-key
 OPENAI_MODEL=gpt-4.1-mini
 ```
 
-Restart the backend. The interface should say **LLM mode**. `.env` is ignored by Git; keys are never sent to the frontend. Use fictional messages: in this mode, the current message and up to eight recent conversation messages are sent to OpenAI. `store=False` is set on requests; this is not a claim of zero provider retention or healthcare compliance. API calls use the configured account and may incur charges.
+Restart the backend. The interface should say **OpenAI**. `.env` is ignored by Git; keys are never sent to the frontend. Use fictional messages: in this mode, the current message and up to eight recent conversation messages are sent to OpenAI. `store=False` is set on requests; this is not a claim of zero provider retention or healthcare compliance. API calls use the configured account and may incur charges.
 
 The adapter uses the Responses API with Pydantic Structured Outputs. The model is configurable; choose a model that supports those features. A refusal, timeout, or invalid output clears the proposal and returns a safe error. It never silently switches to demo mode.
 
@@ -86,16 +102,19 @@ npm --prefix frontend run build
 npm --prefix frontend run format:check
 ```
 
-- **67 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, provider failures, hosted origins, and serving the built interface.
+- **86 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, provider failures, hosted origins, serving the built interface, and the Gemini integration contract.
 - **10/10 supplied example intents matched** in demo mode; **0 unconfirmed appointment mutations**. Full responses and traces are in [demo-results.json](docs/demo-results.json). These hand-picked examples are a smoke evaluation, not a general accuracy estimate.
+- On the **extended offline evaluation**, only **14/20 intents** and **6/9 checked entity cases** match; see [demo-extended-results.json](docs/demo-extended-results.json). In particular, a less familiar hold phrase still produces a proposal in the baseline, although it does not change an appointment. These failures are preserved rather than reported as passing checks, and show why live Gemini evaluation is required.
 - Browser checks cover booking, rescheduling, cancellation, dialogs, and responsive layouts. Details and limitations are in [validation.md](docs/validation.md).
 - Two upstream deprecation warnings occur in the Starlette testing dependencies; the tests pass.
 
 To evaluate actual model output after configuring a key, explicitly run:
 
 ```powershell
-.\.venv\Scripts\python.exe -m backend.evaluate --provider openai --output docs/openai-results.json
+.\.venv\Scripts\python.exe -m backend.evaluate --provider gemini --suite extended --output docs/gemini-results.json
 ```
+
+The extended evaluation adds ten paraphrase/entity cases to the ten supplied examples. It records raw extraction, entity checks, local policy routing, and failures separately. Live cases are spaced 12 seconds apart by default; adjust `--delay` to the project's quota. An unavailable provider stops the run and saves the observed failure rather than retrying or substituting demo results.
 
 ## Project guide
 
@@ -103,6 +122,8 @@ To evaluate actual model output after configuring a key, explicitly run:
 | --- | --- |
 | `backend/app/models.py` | Typed input, extraction, proposals, and responses |
 | `backend/app/interpreter.py` | Interchangeable demo and OpenAI extraction |
+| `backend/app/gemini.py` | Gemini REST adapter, structured validation, and quota handling |
+| `backend/app/providers.py` | Explicit provider selection for the server and evaluation |
 | `backend/app/prompts/extract.md` | Intent rules, entity rules, trust boundary, examples |
 | `backend/app/engine.py` | Conversation state, policy checks, proposal and confirmation |
 | `backend/app/clinic.py` | Mock facts, schedule, and 30-minute conflict checks |

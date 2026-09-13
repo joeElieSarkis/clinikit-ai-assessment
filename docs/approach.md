@@ -17,13 +17,17 @@ The LLM handles linguistic variation. Deterministic code handles authority and s
 
 ## Intent, entities, and prompting
 
-The OpenAI interpreter returns a Pydantic `Extraction`: intent, doctor, requested date/time, original appointment date, appointment reference, a hold flag, and an ambiguity flag. The prompt distinguishes a booking enquiry from an availability question and the original date from the destination when moving a visit. Missing fields stay null. It preserves “4” so the backend can ask for am/pm, and “after 5 pm” so availability uses a range rather than an invented exact time.
+The default Gemini interpreter returns a Pydantic `Extraction`: intent, doctor, requested date/time, original appointment date, appointment reference, a hold flag, and an ambiguity flag. The optional OpenAI adapter uses the same contract. The prompt distinguishes a booking enquiry from an availability question and the original date from the destination when moving a visit. Missing fields stay null. It preserves “4” so the backend can ask for am/pm, and “after 5 pm” so availability uses a range rather than an invented exact time.
 
 The prompt treats patient messages and conversation history as untrusted data. It includes the assessment’s difficult cases, but cannot itself guarantee resistance to every adversarial phrase. The structural protection is that **no chat response can execute an appointment mutation**. Even a plausible but incorrect extraction must pass validation and a patient-visible proposal.
 
-The default `gpt-4.1-mini` is an adjustable, modest model choice for structured extraction. No model-quality or latency comparison has been performed. The adapter uses a 20-second timeout, no automatic provider retries, and at most eight history messages to bound latency and context. Failed interpretation clears state that might otherwise be confirmed accidentally.
+The default `gemini-2.5-flash` is a configurable initial choice with a documented free tier, not a claim of being the best model. No live model-quality or latency comparison has been performed. The REST adapter uses a 20-second timeout, no automatic retries, and at most eight history messages. It requests schema-constrained JSON, rejects blocked or incomplete candidates, and validates every field locally. A shared cooldown limits bursts and expands after quota errors. Failed interpretation clears state that might otherwise be confirmed accidentally. Billing is controlled by the Google project, not by the model name in code.
 
 The offline interpreter is a transparent baseline: regular expressions, a few common spelling corrections, and conservative clarification. It supports the supplied English examples and common follow-ups. It is not a replacement for evaluating the real model on representative messages.
+
+## Why this does not use RAG
+
+The assessment provides bounded clinic actions backed by a small structured mock directory and schedule. Direct tool queries return the required facts. A vector database would add retrieval uncertainty without a document corpus to justify it. If the product later includes clinic policies or patient instructions as documents, a separate retrieval step with citations could support those questions. Availability and appointment mutations would still use the scheduling service.
 
 ## Missing and ambiguous information
 
@@ -57,6 +61,9 @@ Evaluate intent accuracy, entity correctness, unnecessary clarification, unsafe 
 
 ## References
 
+- [Gemini structured outputs](https://ai.google.dev/gemini-api/docs/structured-output): schema-constrained model output and local validation requirements.
+- [Gemini generateContent reference](https://ai.google.dev/api/generate-content): REST request and candidate response contract.
+- [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing) and [billing](https://ai.google.dev/gemini-api/docs/billing): free-tier model availability, quotas, and project billing.
 - [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs): schema-constrained extraction and Python parsing.
 - [GPT-4.1 mini model documentation](https://developers.openai.com/api/docs/models/gpt-4.1-mini): supported API features.
 - [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/): request-level tests with TestClient.

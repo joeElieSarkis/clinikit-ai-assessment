@@ -4,10 +4,13 @@ Browser checks were completed locally on 12 September 2026; automated checks wer
 
 ## Automated checks
 
-- 67 backend tests pass. This includes all ten supplied example messages, typed API input, state transitions, repeated requests, session ownership, expired/stale proposals, availability rechecks, conflicting appointment times, holds, unavailable model handling, and hosting checks.
+- 86 backend tests pass. This includes all ten supplied example messages, typed API input, state transitions, repeated requests, session ownership, expired/stale proposals, availability rechecks, conflicting appointment times, holds, unavailable model handling, hosting checks, and the Gemini adapter contract.
 - Ten supplied example intents match in offline demo evaluation. None changes an appointment without confirmation. Full observed responses and decision records are in `demo-results.json`.
 - The frontend passes TypeScript checking and a Vite production build.
 - The OpenAI adapter contract is tested with a mock client. **No live OpenAI requests were tested because no API key was configured.** The ten-example demo result must not be presented as an LLM benchmark.
+- The Gemini adapter is tested with an HTTP mock transport: schema and credential placement, limited history, missing keys, blocked/truncated/invalid output, provider errors, quota cooldowns, no automatic fallback, and unchanged confirmation requirements. **No live Gemini requests have been tested; a real free-tier key is still needed.**
+- The evaluation command supports Gemini and an extended set of ten additional paraphrase/entity cases. It records raw extraction and distinguishes local routing from model interpretation. No extended Gemini score is claimed before running it.
+- The extended **offline** evaluation was run and deliberately retains its failures: 14/20 intent matches, 6/9 entity-case matches, and zero unconfirmed mutations. One unfamiliar hold phrase yields a proposal, despite the intended hold. The evaluator correctly exits with code 1; this is a baseline limitation, not a failing unit test that was hidden. Full traces are in `demo-extended-results.json`. These extra cases have now been inspected during development, so they are a regression set rather than an independent held-out benchmark.
 - The testing dependencies emit two upstream deprecation warnings. No failing tests were suppressed.
 
 ## Hosting checks
