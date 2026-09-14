@@ -1,6 +1,7 @@
 """Reproduce assessment examples with a fixed Beirut clock and write real results."""
 import argparse
 from copy import deepcopy
+from hashlib import sha256
 import json
 from datetime import datetime
 from pathlib import Path
@@ -66,6 +67,7 @@ def main():
     parser.add_argument('--provider', choices=['gemini', 'demo', 'openai'], default='gemini')
     parser.add_argument('--model', help='Override the configured model; does not change the account billing tier.')
     parser.add_argument('--suite', choices=['assessment', 'extended'], default='assessment')
+    parser.add_argument('--limit', type=int, help='Run only the first N cases to conserve the free daily allowance.')
     parser.add_argument('--delay', type=float, help='Seconds between cases; defaults to 12 for live providers, 0 for demo.')
     parser.add_argument('--output', help='Results path; defaults to docs/<provider>-<suite>-results.json.')
     args = parser.parse_args()
@@ -84,6 +86,11 @@ def main():
     cases = [(text, intent, {}) for text, intent in CASES]
     if args.suite == 'extended':
         cases += EXTRA_CASES
+    available_cases = len(cases)
+    if args.limit is not None:
+        if not 1 <= args.limit <= available_cases:
+            parser.error(f'--limit must be between 1 and {available_cases}')
+        cases = cases[:args.limit]
     rows = []
     for index, (message, expected, expected_entities) in enumerate(cases):
         if index:
@@ -110,8 +117,9 @@ def main():
             # Preserve the failure and stop; do not burn quota on an unavailable provider.
             break
     result = {'provider': args.provider, 'model': model, 'reference_time': reference.isoformat(),
+              'prompt_sha256': sha256(provider.prompt.encode('utf-8')).hexdigest() if hasattr(provider, 'prompt') else None,
               'evaluated_at': datetime.now(TIMEZONE).isoformat(),
-              'suite': args.suite, 'planned_cases': len(cases),
+              'suite': args.suite, 'available_cases': available_cases, 'planned_cases': len(cases),
               'scope': 'Each case starts a fresh fictional session. Extended adds ten paraphrase/entity checks. Local routing is reported separately; this is not a general accuracy benchmark.',
               'intent_matches': sum(row['intent_match'] for row in rows), 'cases': len(rows),
               'entity_cases': sum(bool(row['expected_entities']) for row in rows),

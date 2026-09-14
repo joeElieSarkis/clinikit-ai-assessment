@@ -8,17 +8,19 @@ All patients, doctors, clinic hours, appointments, and handoffs are fictional. T
 
 ## Connect Gemini
 
-The live configuration uses **Gemini 2.5 Flash**. Create a key in [Google AI Studio](https://aistudio.google.com/apikey) using a project on the **Free tier with billing disabled**. Copy `.env.example` to `.env` once and fill in:
+The live configuration uses **Gemini 3.6 Flash**. Create a key in [Google AI Studio](https://aistudio.google.com/apikey) using a project on the **Free tier with billing disabled**. Copy `.env.example` to `.env` once and fill in:
 
 ```dotenv
 AI_PROVIDER=gemini
 GEMINI_API_KEY=your-own-key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 ```
 
 Follow [gemini.md](docs/gemini.md) for setup and live checks. The backend sends the current fictional message, active draft, and up to eight recent messages to Google. The API key remains on the server and `.env` is excluded from Git and the Docker image. Google lists free input/output usage for this model, with account quotas and free-tier data-use terms; use only fictional patient information. See [pricing](https://ai.google.dev/gemini-api/docs/pricing) and [billing](https://ai.google.dev/gemini-api/docs/billing).
 
-Gemini interprets intent and entities. Python validates the schedule, controls changes, and constructs replies from verified results. A missing key is a setup error; a provider failure never silently switches to rules. **A live Gemini evaluation is still pending a real key.**
+Gemini interprets intent and entities. Python validates the schedule, controls changes, and constructs replies from verified results. A missing key is a setup error; a provider failure never silently switches to rules. **Live Gemini evaluation and a browser booking were completed on 14 September 2026**, with the limits and remaining checks recorded below.
+
+This test project's free quota was **20 generation requests per day for this model**. The first evaluation used 19 model calls plus one local handoff; the browser booking used the remaining call. Check your own [active limits](https://ai.google.dev/gemini-api/docs/rate-limits) before running the full evaluation. Hosting on Render does not increase the model quota.
 
 For an explicit offline baseline, set `AI_PROVIDER=demo` in `.env`. It requires no API key, shows **Offline demo**, and has limited English rule matching. Its results are not an LLM benchmark.
 
@@ -79,7 +81,7 @@ Restart the backend. The interface should say **OpenAI**. `.env` is ignored by G
 
 The adapter uses the Responses API with Pydantic Structured Outputs. The model is configurable; choose a model that supports those features. A refusal, timeout, or invalid output clears the proposal and returns a safe error. It never silently switches to demo mode.
 
-**Live model quality has not yet been evaluated with a real key.** Unit tests mock the provider to verify the integration contract and failure path. Demo mode is a bounded English rule interpreter, not an LLM or a claim of broad language understanding.
+**The OpenAI adapter has not been evaluated with a real key.** Unit tests mock that provider to verify the integration contract and failure path. Demo mode is a bounded English rule interpreter, not an LLM or a claim of broad language understanding.
 
 ## Try it
 
@@ -102,19 +104,20 @@ npm --prefix frontend run build
 npm --prefix frontend run format:check
 ```
 
-- **86 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, provider failures, hosted origins, serving the built interface, and the Gemini integration contract.
+- **87 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, provider failures, hosted origins, serving the built interface, and the Gemini integration contract.
 - **10/10 supplied example intents matched** in demo mode; **0 unconfirmed appointment mutations**. Full responses and traces are in [demo-results.json](docs/demo-results.json). These hand-picked examples are a smoke evaluation, not a general accuracy estimate.
-- On the **extended offline evaluation**, only **14/20 intents** and **6/9 checked entity cases** match; see [demo-extended-results.json](docs/demo-extended-results.json). In particular, a less familiar hold phrase still produces a proposal in the baseline, although it does not change an appointment. These failures are preserved rather than reported as passing checks, and show why live Gemini evaluation is required.
+- On the **extended offline evaluation**, only **14/20 intents** and **6/9 checked entity cases** match; see [demo-extended-results.json](docs/demo-extended-results.json). In particular, a less familiar hold phrase still produces a proposal in the baseline, although it does not change an appointment. These failures are preserved rather than reported as passing checks.
+- The **initial live Gemini run** matched **20/20 workflow intents** and **8/9 checked entity cases**, with **0 unconfirmed mutations**. Nineteen cases called Gemini; one handoff used local routing. See [gemini-results.json](docs/gemini-results.json). It over-classified “pencil me in” as a hold. A prompt clarification fixed that phrasing in a subsequent live browser check, where the proposal was displayed and explicitly confirmed. The full suite was not rerun after that prompt change because the daily quota was reached. These are small regression results, not a general accuracy estimate.
 - Browser checks cover booking, rescheduling, cancellation, dialogs, and responsive layouts. Details and limitations are in [validation.md](docs/validation.md).
 - Two upstream deprecation warnings occur in the Starlette testing dependencies; the tests pass.
 
-To evaluate actual model output after configuring a key, explicitly run:
+For a short live check after configuring a key and checking the remaining quota:
 
 ```powershell
-.\.venv\Scripts\python.exe -m backend.evaluate --provider gemini --suite extended --output docs/gemini-results.json
+.\.venv\Scripts\python.exe -m backend.evaluate --provider gemini --suite extended --limit 3 --output work/gemini-smoke-results.json
 ```
 
-The extended evaluation adds ten paraphrase/entity cases to the ten supplied examples. It records raw extraction, entity checks, local policy routing, and failures separately. Live cases are spaced 12 seconds apart by default; adjust `--delay` to the project's quota. An unavailable provider stops the run and saves the observed failure rather than retrying or substituting demo results.
+Omit `--limit 3` for all twenty cases when enough daily quota remains, and choose a new output path to preserve prior results. The extended evaluation adds ten paraphrase/entity cases to the ten supplied examples. It records raw extraction, entity checks, local policy routing, prompt hash, and failures separately. Live cases are spaced 12 seconds apart by default; this limits request frequency but does not increase the daily allowance. An unavailable provider stops the run and saves the observed failure rather than retrying or substituting demo results.
 
 ## Project guide
 

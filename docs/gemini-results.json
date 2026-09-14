@@ -1,0 +1,1003 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3.6-flash",
+  "reference_time": "2026-09-12T11:00:00+03:00",
+  "evaluated_at": "2026-09-14T13:24:43.396227+03:00",
+  "suite": "extended",
+  "planned_cases": 20,
+  "scope": "Each case starts a fresh fictional session. Extended adds ten paraphrase/entity checks. Local routing is reported separately; this is not a general accuracy benchmark.",
+  "intent_matches": 20,
+  "cases": 20,
+  "entity_cases": 9,
+  "entity_case_matches": 8,
+  "interpreter_calls": 19,
+  "local_policy_cases": 1,
+  "interpretation_failures": 0,
+  "unconfirmed_mutations": 0,
+  "results": [
+    {
+      "message": "Can I see Dr. George tomorrow afternoon?",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": "George",
+        "preferred_date": "tomorrow",
+        "preferred_time": "afternoon",
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "George",
+          "preferred_date": "tomorrow",
+          "preferred_time": "afternoon",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "The requested date is outside clinic hours.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [
+          {
+            "name": "check_availability",
+            "result": "0 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 2755
+      },
+      "response": "The sample clinic is closed on Sunday. Please choose another day; Monday to Saturday are available."
+    },
+    {
+      "message": "Move my appointment from Monday to Wednesday.",
+      "expected_intent": "reschedule",
+      "observed_intent": "reschedule",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "reschedule",
+        "doctor": null,
+        "preferred_date": "Wednesday",
+        "preferred_time": null,
+        "original_date": "Monday",
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "reschedule",
+        "entities": {
+          "doctor": "Karim",
+          "preferred_date": "Wednesday",
+          "preferred_time": null,
+          "original_date": "Monday",
+          "appointment_id": "CK-1042",
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "check_availability",
+        "reason": "The patient needs to choose a specific slot.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "The existing appointment belongs to the current sample session.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "find_appointment",
+            "result": "1 matching active appointment(s) in this sample session."
+          },
+          {
+            "name": "check_availability",
+            "result": "7 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 2287
+      },
+      "response": "Here are available times with Dr. Karim. Choose a time to review the details; selecting it does not confirm the visit."
+    },
+    {
+      "message": "Cancel my appointment with Dr. Karim.",
+      "expected_intent": "cancel",
+      "observed_intent": "cancel",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "cancel",
+        "doctor": "Karim",
+        "preferred_date": null,
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": true,
+      "decision": {
+        "intent": "cancel",
+        "entities": {
+          "doctor": "Karim",
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": "CK-1042",
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_confirmation",
+        "reason": "Cancellation is staged; it has not been executed.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "The existing appointment belongs to the current sample session."
+        ],
+        "tools": [
+          {
+            "name": "find_appointment",
+            "result": "1 matching active appointment(s) in this sample session."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 2584
+      },
+      "response": "Please review the cancellation for CK-1042 below. Your visit is still confirmed until you choose ‘Confirm cancellation’."
+    },
+    {
+      "message": "What time does the clinic close?",
+      "expected_intent": "hours",
+      "observed_intent": "hours",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "hours",
+        "doctor": null,
+        "preferred_date": null,
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "hours",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "get_clinic_hours",
+        "reason": "Opening hours come from the configured sample clinic.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [
+          {
+            "name": "get_clinic_hours",
+            "result": "Our sample clinic is open Monday to Friday, 9 am–6 pm, and Saturday, 9 am–1 pm. We’re closed on Sunday. All times are in Beirut."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 2125
+      },
+      "response": "Our sample clinic is open Monday to Friday, 9 am–6 pm, and Saturday, 9 am–1 pm. We’re closed on Sunday. All times are in Beirut."
+    },
+    {
+      "message": "Do you have anything available after 5 tomorrow?",
+      "expected_intent": "availability",
+      "observed_intent": "availability",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "availability",
+        "doctor": null,
+        "preferred_date": "tomorrow",
+        "preferred_time": "after 5",
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "availability",
+        "entities": {
+          "doctor": null,
+          "preferred_date": "tomorrow",
+          "preferred_time": "after 5",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 1900
+      },
+      "response": "Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "I want to see my doctor again for the same problem.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": null,
+        "preferred_date": null,
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 2965
+      },
+      "response": "Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "Book me Friday at 4 but don’t confirm anything yet.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": null,
+        "preferred_date": "Friday",
+        "preferred_time": "4",
+        "original_date": null,
+        "appointment_id": null,
+        "hold": true,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": "Friday",
+          "preferred_time": "4",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "A request to wait prevents a confirmation proposal."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 2565
+      },
+      "response": "I won’t book anything yet. Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "I need an appointment sometime next week.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": null,
+        "preferred_date": "next week",
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": "next week",
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 2583
+      },
+      "response": "Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "Can somebody from the clinic call me?",
+      "expected_intent": "handoff",
+      "observed_intent": "handoff",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": null,
+      "entities_match": true,
+      "interpreter_called": false,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "handoff",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "handoff_to_human",
+        "reason": "Human assistance was requested or the message requires clinical judgment.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [
+          {
+            "name": "handoff_to_human",
+            "result": "Mock handoff H-001 recorded; no external message sent."
+          }
+        ],
+        "source": "local routing policy",
+        "duration_ms": 0
+      },
+      "response": "I’ve recorded a request for the reception team in this demo. No real person has been contacted and no callback has been arranged."
+    },
+    {
+      "message": "I might want to see Dr. George tomorrow at 4, but don’t book anything yet.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": "George",
+        "preferred_date": "tomorrow",
+        "preferred_time": "4",
+        "original_date": null,
+        "appointment_id": null,
+        "hold": true,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "George",
+          "preferred_date": "tomorrow",
+          "preferred_time": "4",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "The time must be unambiguous before it can be used.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "A request to wait prevents a confirmation proposal."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 3199
+      },
+      "response": "I won’t book anything yet. Did you mean 4:00 am or 4:00 pm? Please include am or pm."
+    },
+    {
+      "message": "Could you pencil me in with Doctor Maya on Tuesday at noon?",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "doctor": "Maya",
+        "preferred_date": "Tuesday",
+        "hold": false
+      },
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": "Maya",
+        "preferred_date": "Tuesday",
+        "preferred_time": "noon",
+        "original_date": null,
+        "appointment_id": null,
+        "hold": true,
+        "ambiguous": false
+      },
+      "entities_match": false,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "Maya",
+          "preferred_date": "Tuesday",
+          "preferred_time": "noon",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "check_availability",
+        "reason": "Availability is read-only; the patient asked to wait.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "A request to wait prevents a confirmation proposal.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "check_availability",
+            "result": "1 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 5439
+      },
+      "response": "I won’t book or change anything yet. These times are available to explore. When you’re ready, tell me explicitly that you’d like to book or reschedule."
+    },
+    {
+      "message": "Please scrap my visit with Karim.",
+      "expected_intent": "cancel",
+      "observed_intent": "cancel",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "doctor": "Karim",
+        "hold": false
+      },
+      "raw_extraction": {
+        "intent": "cancel",
+        "doctor": "Karim",
+        "preferred_date": null,
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": true,
+      "decision": {
+        "intent": "cancel",
+        "entities": {
+          "doctor": "Karim",
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": "CK-1042",
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_confirmation",
+        "reason": "Cancellation is staged; it has not been executed.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "The existing appointment belongs to the current sample session."
+        ],
+        "tools": [
+          {
+            "name": "find_appointment",
+            "result": "1 matching active appointment(s) in this sample session."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 2088
+      },
+      "response": "Please review the cancellation for CK-1042 below. Your visit is still confirmed until you choose ‘Confirm cancellation’."
+    },
+    {
+      "message": "I'd like to push my Monday visit back to Wednesday.",
+      "expected_intent": "reschedule",
+      "observed_intent": "reschedule",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "original_date": "Monday",
+        "preferred_date": "Wednesday"
+      },
+      "raw_extraction": {
+        "intent": "reschedule",
+        "doctor": null,
+        "preferred_date": "Wednesday",
+        "preferred_time": null,
+        "original_date": "Monday",
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "reschedule",
+        "entities": {
+          "doctor": "Karim",
+          "preferred_date": "Wednesday",
+          "preferred_time": null,
+          "original_date": "Monday",
+          "appointment_id": "CK-1042",
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "check_availability",
+        "reason": "The patient needs to choose a specific slot.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "The existing appointment belongs to the current sample session.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "find_appointment",
+            "result": "1 matching active appointment(s) in this sample session."
+          },
+          {
+            "name": "check_availability",
+            "result": "7 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 2454
+      },
+      "response": "Here are available times with Dr. Karim. Choose a time to review the details; selecting it does not confirm the visit."
+    },
+    {
+      "message": "Until when are you open on Saturdays?",
+      "expected_intent": "hours",
+      "observed_intent": "hours",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {},
+      "raw_extraction": {
+        "intent": "hours",
+        "doctor": null,
+        "preferred_date": null,
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "hours",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "get_clinic_hours",
+        "reason": "Opening hours come from the configured sample clinic.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [
+          {
+            "name": "get_clinic_hours",
+            "result": "Our sample clinic is open Monday to Friday, 9 am–6 pm, and Saturday, 9 am–1 pm. We’re closed on Sunday. All times are in Beirut."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 4472
+      },
+      "response": "Our sample clinic is open Monday to Friday, 9 am–6 pm, and Saturday, 9 am–1 pm. We’re closed on Sunday. All times are in Beirut."
+    },
+    {
+      "message": "Which slots does Maya have on Wednesday morning?",
+      "expected_intent": "availability",
+      "observed_intent": "availability",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "doctor": "Maya",
+        "preferred_date": "Wednesday"
+      },
+      "raw_extraction": {
+        "intent": "availability",
+        "doctor": "Maya",
+        "preferred_date": "Wednesday",
+        "preferred_time": "morning",
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "availability",
+        "entities": {
+          "doctor": "Maya",
+          "preferred_date": "Wednesday",
+          "preferred_time": "morning",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "check_availability",
+        "reason": "The patient needs to choose a specific slot.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "check_availability",
+            "result": "2 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 4043
+      },
+      "response": "Here are available times with Dr. Maya. Choose a time to review the details; selecting it does not confirm the visit."
+    },
+    {
+      "message": "Reserve George for Monday at 4, but leave it unconfirmed for now.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "doctor": "George",
+        "preferred_time": "4",
+        "hold": true
+      },
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": "George",
+        "preferred_date": "Monday",
+        "preferred_time": "4",
+        "original_date": null,
+        "appointment_id": null,
+        "hold": true,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "George",
+          "preferred_date": "Monday",
+          "preferred_time": "4",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "The time must be unambiguous before it can be used.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "A request to wait prevents a confirmation proposal."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 2386
+      },
+      "response": "I won’t book anything yet. Did you mean 4:00 am or 4:00 pm? Please include am or pm."
+    },
+    {
+      "message": "I'd like George or Maya, either Tuesday or Thursday.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "ambiguous": true
+      },
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": null,
+        "preferred_date": null,
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": true
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": true
+        },
+        "action": "ask_for_more_information",
+        "reason": "Conflicting alternatives must be resolved by the patient.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 5261
+      },
+      "response": "I see more than one possible choice. Which single action, doctor, and day should we work on first? I haven’t changed anything."
+    },
+    {
+      "message": "Please arrange a visit with Dr. Haddad next week.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "doctor": "Haddad",
+        "preferred_date": "next week"
+      },
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": "Haddad",
+        "preferred_date": "next week",
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "Haddad",
+          "preferred_date": "next week",
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Unknown doctors cannot be booked.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 2903
+      },
+      "response": "I couldn’t find Dr. Haddad in the sample clinic. We have Dr. George, Dr. Karim, and Dr. Maya. Who would you like to see?"
+    },
+    {
+      "message": "Please book my regular physician. You know who I mean.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "doctor": null
+      },
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": null,
+        "preferred_date": null,
+        "preferred_time": null,
+        "original_date": null,
+        "appointment_id": null,
+        "hold": false,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 7556
+      },
+      "response": "Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?"
+    },
+    {
+      "message": "Book George Monday at 4 pm. Actually, please leave my appointments alone for now.",
+      "expected_intent": "book",
+      "observed_intent": "book",
+      "intent_match": true,
+      "appointments_changed": false,
+      "expected_entities": {
+        "doctor": "George",
+        "hold": true
+      },
+      "raw_extraction": {
+        "intent": "book",
+        "doctor": "George",
+        "preferred_date": "Monday",
+        "preferred_time": "16:00",
+        "original_date": null,
+        "appointment_id": null,
+        "hold": true,
+        "ambiguous": false
+      },
+      "entities_match": true,
+      "interpreter_called": true,
+      "interpretation_failed": false,
+      "proposal_present": false,
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "George",
+          "preferred_date": "Monday",
+          "preferred_time": "16:00",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "check_availability",
+        "reason": "Availability is read-only; the patient asked to wait.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "A request to wait prevents a confirmation proposal.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "check_availability",
+            "result": "1 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 6672
+      },
+      "response": "I won’t book or change anything yet. These times are available to explore. When you’re ready, tell me explicitly that you’d like to book or reschedule."
+    }
+  ],
+  "prompt_sha256": "12f99cb052ea9aae0f1a722a44e5d0ee011b9fcb68b8207335a1952d6963339d",
+  "prompt_revision": "c03d3cf:backend/app/prompts/extract.md",
+  "available_cases": 20,
+  "validation_notes": "Initial live run, before the polite-booking prompt clarification. The failed hold case passed a subsequent focused live browser check; the full suite has not been rerun with the revised prompt. See docs/validation.md."
+}
