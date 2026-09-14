@@ -125,6 +125,26 @@ def test_gemini_timeout_does_not_fall_back_to_rules(engine, session):
     assert session.messages[-1].decision.action == 'service_unavailable'
 
 
+def test_daily_quota_is_not_reported_as_a_one_minute_wait(engine, session):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(429, json={'error': {'details': [
+            {'violations': [{'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier',
+                             'quotaValue': '20'}]}
+        ]}})
+
+    engine.interpreter = adapter_for(handler)
+    before = deepcopy(session.appointments)
+    for _ in range(2):
+        engine.chat(session, 'Book Dr. George Monday at 4 pm')
+        assert 'daily' in session.messages[-1].content.lower()
+        assert 'wait a minute' not in session.messages[-1].content.lower()
+        assert session.pending is None and session.appointments == before
+    assert len(calls) == 1
+
+
 def test_gemini_cannot_bypass_hold_or_confirmation(engine, session):
     clock = [100.0]
     interpretation = Extraction(intent='book', doctor='George', preferred_date='Monday', preferred_time='4 pm')
@@ -148,7 +168,7 @@ def test_live_provider_is_explicit_in_health_and_session(engine, monkeypatch):
     assert client.get('/api/health').json()['mode'] == 'gemini'
     session = client.post('/api/sessions').json()
     assert session['mode'] == 'gemini'
-    assert session['model'] == 'gemini-2.5-flash'
+    assert session['model'] == 'gemini-3.6-flash'
     response = client.post(f"/api/sessions/{session['id']}/messages",
                            json={'message': 'When do you close?', 'request_id': 'gemini-integration-1'})
     assert response.json()['messages'][-1]['decision']['source'] == 'gemini structured output'

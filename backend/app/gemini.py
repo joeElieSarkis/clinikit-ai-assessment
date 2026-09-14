@@ -11,7 +11,7 @@ import httpx
 from .clinic import DOCTORS
 from .models import Extraction, Message
 
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
 
 
 class GeminiUnavailable(RuntimeError):
@@ -37,6 +37,7 @@ class GeminiInterpreter:
         self._clock = clock
         self._lock = Lock()
         self._next_request = 0.0
+        self._cooldown_code = "rate_limited"
         self.prompt = (Path(__file__).parent / "prompts" / "extract.md").read_text(encoding="utf-8")
 
     def extract(self, text: str, draft: Extraction | None, messages: list[Message], now: datetime) -> Extraction:
@@ -44,8 +45,9 @@ class GeminiInterpreter:
         # Google still enforces the actual project quota, which varies by account.
         with self._lock:
             if self._clock() < self._next_request:
-                raise GeminiUnavailable("rate_limited")
+                raise GeminiUnavailable(self._cooldown_code)
             self._next_request = self._clock() + 2.0
+            self._cooldown_code = "rate_limited"
         context = {
             "reference_time": now.isoformat(), "timezone": "Asia/Beirut", "known_doctors": DOCTORS,
             "current_draft": draft.model_dump() if draft else None,
@@ -79,9 +81,18 @@ class GeminiInterpreter:
         except httpx.HTTPError:
             raise GeminiUnavailable("unavailable") from None
         if response.status_code == 429:
+            code = "rate_limited"
+            try:
+                details = response.json().get("error", {}).get("details", [])
+                if any("PerDay" in str(violation.get("quotaId", ""))
+                       for detail in details for violation in detail.get("violations", [])):
+                    code = "daily_quota"
+            except (ValueError, AttributeError, TypeError):
+                pass
             with self._lock:
                 self._next_request = max(self._next_request, self._clock() + 60.0)
-            raise GeminiUnavailable("rate_limited")
+                self._cooldown_code = code
+            raise GeminiUnavailable(code)
         if response.status_code in (401, 403):
             raise GeminiUnavailable("configuration")
         if response.status_code == 404:

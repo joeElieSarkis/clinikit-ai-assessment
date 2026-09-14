@@ -89,7 +89,10 @@ class ReceptionEngine:
             checks.append("Interpretation failed; no proposed action or appointment mutation remains.")
             if isinstance(error, GeminiUnavailable):
                 checks.append(f"Provider failure category: {error.code}.")
-            if isinstance(error, GeminiUnavailable) and error.code == "rate_limited":
+            if isinstance(error, GeminiUnavailable) and error.code == "daily_quota":
+                reply("The daily language-service allowance has been used up. Your appointments are unchanged. Please try again after the daily limit resets, or ask for a person.",
+                      "service_unavailable", "The provider reported a daily request limit; waiting one minute will not restore the daily allowance.")
+            elif isinstance(error, GeminiUnavailable) and error.code == "rate_limited":
                 reply("The language service is receiving too many requests or has reached its quota. Your appointments are unchanged. Please wait a minute before trying again. If it continues, try later or ask for a person.",
                       "service_unavailable", "A local request limit or provider quota prevented interpretation; no automatic retry was made.")
             else:

@@ -21,6 +21,7 @@ preferred_time: preserve the patient's words, including after/before, morning/af
 original_date: only the date identifying the EXISTING appointment, not the destination.
 appointment_id: only an explicitly provided appointment reference such as CK-1042. Never make one up.
 hold: true for "don't book/confirm/cancel yet", "might", "maybe", "just checking", uncertainty, or any request to delay action. The most restrictive phrase wins even if the message also says "book".
+Polite requests such as "could you arrange a visit?" and "pencil me in" ask to review a booking; they do not by themselves request a hold. A proposal is already provisional until separately confirmed. Set hold=true only when the patient expresses actual uncertainty or asks to delay/avoid a change, not merely because the request is phrased politely.
 ambiguous: true for conflicting choices, more than one doctor without a unique choice, multiple incompatible actions, ambiguous dates, or uncertainty about which entity a phrase refers to. Missing fields alone are represented by null, not ambiguous=true.
 
 FOLLOW-UPS
