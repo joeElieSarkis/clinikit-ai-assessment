@@ -6,12 +6,20 @@ from threading import RLock
 from time import monotonic, perf_counter
 from uuid import uuid4
 
-from .clinic import DOCTORS, HOURS, check_availability, describe, is_available, now_local, seed_appointments
+from .clinic import DOCTORS, HOURS, check_availability, describe, is_available, minutes, now_local, seed_appointments
 from .dates import resolve_dates, resolve_existing_dates, resolve_time
 from .gemini import GeminiUnavailable
+from .followups import detail_reply
 from .interpreter import DemoInterpreter, has_hold, normalize
 from .models import Appointment, Decision, Extraction, Message, Proposal, SessionView, Slot, ToolResult
 from .selection import match_selection, reference_reply, short_selection
+
+
+@dataclass
+class RetryContext:
+    message: str
+    draft: Extraction | None
+    appointment_choices: list[str]
 
 
 @dataclass
@@ -24,6 +32,7 @@ class Session:
     draft: Extraction | None = None
     slots: list[Slot] = field(default_factory=list)
     appointment_choices: list[str] = field(default_factory=list)
+    retry_context: RetryContext | None = None
     handoffs: int = 0
     requests: dict[str, str] = field(default_factory=dict)
     touched: float = field(default_factory=monotonic)
@@ -46,7 +55,13 @@ class ReceptionEngine:
     def chat(self, s: Session, text: str) -> None:
         started = perf_counter()
         previous = s.draft
-        previous_choices = [a for a in s.appointments if a.id in s.appointment_choices and a.status == "confirmed"]
+        choice_ids = s.appointment_choices
+        if s.retry_context and text.strip() == s.retry_context.message:
+            previous = s.retry_context.draft
+            choice_ids = s.retry_context.appointment_choices
+            s.draft = previous
+        s.retry_context = None
+        previous_choices = [a for a in s.appointments if a.id in choice_ids and a.status == "confirmed"]
         s.appointment_choices = []
         s.pending = None  # Every new message invalidates an earlier confirmation token.
         s.slots = []
@@ -73,6 +88,11 @@ class ReceptionEngine:
                   reason="The patient must identify one of the actual active visits shown here.")
 
         t = normalize(text)
+        if re.fullmatch(r"[a-z]|[.!?]+", t.strip()):
+            source = "local routing policy"
+            s.appointment_choices = [a.id for a in previous_choices]
+            reply("Could you tell me a little more about what you’d like help with?", reason="An incomplete message needs clarification, not a provider request.", extraction=Extraction(intent="unclear"))
+            return
         if re.fullmatch(r"(?:hi+|hello|hey+|good (?:morning|afternoon|evening))(?: (?:there|again|reception))?[.!? ]*", t.strip()):
             source = "local routing policy"
             s.appointment_choices = [a.id for a in previous_choices]
@@ -112,22 +132,42 @@ class ReceptionEngine:
             elif selecting and (choice := short_selection(text, previous, selection_pool, self.clock())):
                 extracted = choice
                 source = "local routing policy"
+            elif not selecting and (detail := detail_reply(text, previous, self.clock())):
+                extracted = detail
+                source = "local routing policy"
+                checks.append("An explicit doctor, date, time, or slot selection fills the active validated request without a provider call.")
             else:
                 extracted = self.interpreter.extract(text, previous, s.messages[:-1], self.clock())
         except Exception as error:
-            # Fail closed: never silently substitute demo rules for a failed live model.
+            # Suspend the draft for an explicit retry; no old proposal can be confirmed.
+            # A different new message does not silently inherit this suspended state.
+            saved = previous.model_copy(deep=True) if previous else None
+            if saved:
+                saved.hold = saved.hold or has_hold(text)
+            s.retry_context = RetryContext(text.strip(), saved, [a.id for a in previous_choices])
             s.draft = None
-            checks.append("Interpretation failed; no proposed action or appointment mutation remains.")
+            checks.append("Interpretation failed; the previous proposal is invalid. Earlier validated details are suspended for an explicit retry.")
             if isinstance(error, GeminiUnavailable):
                 checks.append(f"Provider failure category: {error.code}.")
-            if isinstance(error, GeminiUnavailable) and error.code == "daily_quota":
-                reply("The daily language-service allowance has been used up. Your appointments are unchanged. Please try again after the daily limit resets, or ask for a person.",
-                      "service_unavailable", "The provider reported a daily request limit; waiting one minute will not restore the daily allowance.")
-            elif isinstance(error, GeminiUnavailable) and error.code == "rate_limited":
-                reply("The language service is receiving too many requests or has reached its quota. Your appointments are unchanged. Please wait a minute before trying again. If it continues, try later or ask for a person.",
-                      "service_unavailable", "A local request limit or provider quota prevented interpretation; no automatic retry was made.")
-            else:
-                reply("I couldn’t reliably understand that request because the language service is unavailable. Your appointments are unchanged. Please try again, or ask for a person.", "service_unavailable", "The interpreter failed or did not return validated data.")
+                if error.http_status:
+                    checks.append(f"Provider HTTP status: {error.http_status}.")
+                if error.response_reason:
+                    checks.append(f"Provider response category: {error.response_reason}.")
+            code = error.code if isinstance(error, GeminiUnavailable) else "unexpected_error"
+            descriptions = {
+                "daily_quota": "Today’s free AI message limit has been reached. Please try again after the daily quota resets.",
+                "rate_limited": "The AI service has reached a request or quota limit. Please wait a minute before retrying; daily limits take longer to reset.",
+                "timeout": "That message took too long to process. Please retry it.",
+                "connection_error": "I couldn’t connect to the AI service. Please retry your message in a moment.",
+                "provider_error": "The AI service couldn’t process that message right now. Please retry it in a moment.",
+                "invalid_output": "I couldn’t read the AI service’s response. Please retry your message.",
+                "configuration": "The AI connection needs to be checked. Please check the server’s API key and access settings.",
+                "model_unavailable": "The configured AI model is unavailable. Please check the server’s model setting.",
+            }
+            content = descriptions.get(code, "Something went wrong while processing that message. Please retry it.")
+            if saved:
+                content += " I’ve kept your earlier appointment details for the retry."
+            reply(content + " No appointment has changed.", "service_unavailable", f"Interpretation failed ({code}); retrying is explicit and never confirms an appointment.")
             return
         if selecting and extracted.intent in (previous.intent, "unclear"):
             previous = previous.model_copy(update={"hold": previous.hold or extracted.hold or has_hold(text)})
@@ -172,7 +212,7 @@ class ReceptionEngine:
             s.draft = None
             s.handoffs += 1
             tools.append(ToolResult(name="handoff_to_human", result=f"Mock handoff H-{s.handoffs:03d} recorded; no external message sent."))
-            content = "I’ve recorded a request for the reception team in this demo. No real person has been contacted and no callback has been arranged."
+            content = f"I’ve recorded callback request H-{s.handoffs:03d} for reception. This is a demo, so it won’t trigger a real call."
             if extracted.intent == "medical":
                 content = "Medical questions need a qualified clinician. If this is an emergency, contact local emergency services now. " + content
             reply(content, "handoff_to_human", "Human assistance was requested or the message requires clinical judgment.", extracted)
@@ -254,6 +294,8 @@ class ReceptionEngine:
                 reply("The sample clinic is closed on Sunday. Please choose another day; Monday to Saturday are available.", "ask_for_more_information", "The requested date is outside clinic hours.")
             else:
                 alternatives = check_availability(extracted.doctor, days, s.appointments, self.clock(), exclude=target.id if target else None)
+                if exact:
+                    alternatives.sort(key=lambda slot: (abs(minutes(slot.time) - minutes(exact)), slot.date, slot.time))
                 s.slots = alternatives[:5]
                 reply("That time isn’t available in the sample schedule. " + ("Here are other available times on your requested day(s)." if s.slots else "Please choose another day."), "check_availability", "No matching slot is available; the requested time is not invented.")
             return
@@ -315,6 +357,7 @@ class ReceptionEngine:
                 content = f"Your demo appointment {target.id} with Dr. {target.doctor} has been cancelled."
             tools.append(ToolResult(name=action, result=content))
         s.pending, s.draft, s.slots, s.appointment_choices = None, None, [], []
+        s.retry_context = None
         decision = Decision(intent=proposal.kind, entities=proposal.model_dump(exclude={"summary", "id"}), action=action,
                             reason="The patient used the explicit proposal control.", checks=checks, tools=tools, source="confirmation policy")
         s.messages.append(Message(role="assistant", content=content, decision=decision))

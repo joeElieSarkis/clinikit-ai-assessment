@@ -19,7 +19,7 @@ def candidate(extraction=None, finish="STOP"):
 
 def adapter_for(handler, clock=lambda: 100.0):
     return GeminiInterpreter("test-key-never-transmitted", client=httpx.Client(
-        transport=httpx.MockTransport(handler)), clock=clock)
+        transport=httpx.MockTransport(handler)), clock=clock, pause=lambda _: None)
 
 
 def test_gemini_request_keeps_credentials_and_instructions_out_of_patient_data(engine):
@@ -75,7 +75,7 @@ def test_gemini_validates_types_and_unknown_fields_locally(engine):
 
 
 @pytest.mark.parametrize('status,code', [(401, 'configuration'), (403, 'configuration'),
-                                        (404, 'model_unavailable'), (500, 'unavailable'), (302, 'unavailable')])
+                                        (404, 'model_unavailable'), (500, 'provider_error'), (302, 'unavailable')])
 def test_gemini_http_errors_are_sanitized_without_retries(engine, status, code):
     calls = []
 
@@ -168,7 +168,7 @@ def test_live_provider_is_explicit_in_health_and_session(engine, monkeypatch):
     assert client.get('/api/health').json()['mode'] == 'gemini'
     session = client.post('/api/sessions').json()
     assert session['mode'] == 'gemini'
-    assert session['model'] == 'gemini-3.6-flash'
+    assert session['model'] == 'gemini-3.5-flash-lite'
     response = client.post(f"/api/sessions/{session['id']}/messages",
                            json={'message': 'When do you close?', 'request_id': 'gemini-integration-1'})
     assert response.json()['messages'][-1]['decision']['source'] == 'gemini structured output'
@@ -181,3 +181,33 @@ def test_missing_key_cannot_silently_start_the_offline_demo(monkeypatch):
     with pytest.raises(RuntimeError, match='GEMINI_API_KEY'):
         create_app()
     assert create_interpreter('demo').source == 'demo rules'
+
+
+def test_transient_503_is_retried_once_without_changing_the_payload(engine):
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(503) if len(calls) == 1 else httpx.Response(200, json=candidate())
+    adapter = adapter_for(handler)
+    assert adapter.extract('What are your hours?', None, [], engine.clock()).intent == 'hours'
+    assert len(calls) == adapter.requests_sent == 2
+    assert calls[0].content == calls[1].content
+
+
+def test_persistent_503_stops_after_two_attempts(engine):
+    adapter = adapter_for(lambda request: httpx.Response(503, text='private provider error'))
+    with pytest.raises(GeminiUnavailable) as error:
+        adapter.extract('What are your hours?', None, [], engine.clock())
+    assert error.value.code == 'provider_error' and error.value.http_status == 503
+    assert adapter.requests_sent == 2
+
+
+def test_retry_does_not_start_after_the_request_budget_is_used(engine):
+    clock = [100.0]
+    def handler(request):
+        clock[0] += 19.5
+        return httpx.Response(503)
+    adapter = adapter_for(handler, clock=lambda: clock[0])
+    with pytest.raises(GeminiUnavailable):
+        adapter.extract('What are your hours?', None, [], engine.clock())
+    assert adapter.requests_sent == 1

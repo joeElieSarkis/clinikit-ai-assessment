@@ -215,6 +215,10 @@ export default function App() {
     }
   }
   const decisions = session?.messages.filter((m) => m.decision) ?? [];
+  const failedMessage =
+    session?.messages.at(-1)?.decision?.action === 'service_unavailable'
+      ? session.messages.at(-2)
+      : undefined;
   const today = session?.now.slice(0, 10);
   const hasConversation = (session?.messages.length ?? 0) > 1;
   const liveModel = session?.mode === 'gemini' || session?.mode === 'openai';
@@ -330,6 +334,17 @@ export default function App() {
                       )}
                     </div>
                     <p>{message.content}</p>
+                    {message.id === session?.messages.at(-1)?.id &&
+                      failedMessage?.role === 'user' && (
+                        <button
+                          className="retry-message"
+                          disabled={busy}
+                          onClick={() => void send(failedMessage.content)}
+                        >
+                          <RotateCcw size={14} />
+                          Retry message
+                        </button>
+                      )}
                     {message.decision && (
                       <button
                         className="decision-link"
