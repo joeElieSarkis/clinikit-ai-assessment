@@ -7,21 +7,23 @@ from time import monotonic, perf_counter
 from uuid import uuid4
 
 from .clinic import DOCTORS, HOURS, check_availability, describe, is_available, now_local, seed_appointments
-from .dates import resolve_dates, resolve_time
+from .dates import resolve_dates, resolve_existing_dates, resolve_time
 from .gemini import GeminiUnavailable
 from .interpreter import DemoInterpreter, has_hold, normalize
 from .models import Appointment, Decision, Extraction, Message, Proposal, SessionView, Slot, ToolResult
+from .selection import match_selection, reference_reply, short_selection
 
 
 @dataclass
 class Session:
     id: str = field(default_factory=lambda: str(uuid4()))
-    messages: list[Message] = field(default_factory=lambda: [Message(role="assistant", content="Welcome to reception. I can help with appointments, clinic hours, or a request for our reception team. What would you like to do?")])
+    messages: list[Message] = field(default_factory=lambda: [Message(role="assistant", content="Hi! I can help with appointments, clinic hours, or a request for our reception team. How can I help you today?")])
     appointments: list[Appointment] = field(default_factory=list)
     pending: Proposal | None = None
     pending_at: float = 0
     draft: Extraction | None = None
     slots: list[Slot] = field(default_factory=list)
+    appointment_choices: list[str] = field(default_factory=list)
     handoffs: int = 0
     requests: dict[str, str] = field(default_factory=dict)
     touched: float = field(default_factory=monotonic)
@@ -44,6 +46,8 @@ class ReceptionEngine:
     def chat(self, s: Session, text: str) -> None:
         started = perf_counter()
         previous = s.draft
+        previous_choices = [a for a in s.appointments if a.id in s.appointment_choices and a.status == "confirmed"]
+        s.appointment_choices = []
         s.pending = None  # Every new message invalidates an earlier confirmation token.
         s.slots = []
         user_message = Message(role="user", content=text)
@@ -59,7 +63,21 @@ class ReceptionEngine:
                                 duration_ms=round((perf_counter() - started) * 1000))
             s.messages.append(Message(role="assistant", content=content, decision=decision))
 
+        def ask_which(candidates: list[Appointment], explanation: str):
+            if not candidates:
+                reply("You don’t have any active visits in this session to move or cancel.", reason="No active appointment belongs to this session.")
+                return
+            s.appointment_choices = [a.id for a in candidates]
+            visits = "\n".join(f"{index}. {describe(visit)}" for index, visit in enumerate(candidates, start=1))
+            reply(f"{explanation}\n{visits}\nWhich visit do you mean? You can tell me the doctor, time, or which one in the list.", "choose_appointment",
+                  reason="The patient must identify one of the actual active visits shown here.")
+
         t = normalize(text)
+        if re.fullmatch(r"(?:hi+|hello|hey+|good (?:morning|afternoon|evening))(?: (?:there|again|reception))?[.!? ]*", t.strip()):
+            source = "local routing policy"
+            s.appointment_choices = [a.id for a in previous_choices]
+            reply("Hi! How can I help you today?", "greet", "A greeting does not need a language-provider request.", Extraction(intent="unclear"))
+            return
         if re.fullmatch(r"(?:never mind|nevermind|forget it|stop|cancel that|leave it|keep as is)[.! ]*", t):
             source = "local routing policy"
             s.draft = None
@@ -68,6 +86,9 @@ class ReceptionEngine:
         if re.fullmatch(r"(?:yes|yeah|yep|ok|okay|sure|confirm|go ahead|do it|yes please)[.! ]*", t):
             source = "local routing policy"
             s.draft = previous
+            if previous_choices:
+                ask_which(previous_choices, "I still need to know which visit you mean:")
+                return
             reply("To change an appointment, please select a specific time again and use its confirmation button. A message like ‘yes’ doesn’t change your visits.", reason="Free-text acknowledgement cannot authorize a mutation.")
             return
         if re.search(r"ignore (?:all |previous |the )*(?:instructions|rules)|system prompt|developer message|<\/?system>|execute.*(?:sql|code)", t):
@@ -75,11 +96,21 @@ class ReceptionEngine:
             s.draft = None
             reply("I can help with clinic appointments, opening hours, or a request for a person. What would you like help with?", reason="Out-of-scope instructions are not clinic authority.")
             return
+        reference = reference_reply(text)
+        selecting = bool(previous and previous.intent in ("reschedule", "cancel") and
+                         (reference or (previous_choices and not re.search(r"\b(book|schedule|reschedule|move|cancel|delete|remove|change|shift|postpone)\b", t))))
+        selection_pool = [a for a in s.appointments if a.status == "confirmed"] if reference else previous_choices
         try:
             # Explicit handoff remains available during a language-provider outage.
             local = DemoInterpreter().extract(text, None, [], self.clock())
             if local.intent in ("handoff", "medical"):
                 extracted = local
+                source = "local routing policy"
+            elif selecting and reference:
+                extracted = Extraction(intent=previous.intent, appointment_id=reference)
+                source = "local routing policy"
+            elif selecting and (choice := short_selection(text, previous, selection_pool, self.clock())):
+                extracted = choice
                 source = "local routing policy"
             else:
                 extracted = self.interpreter.extract(text, previous, s.messages[:-1], self.clock())
@@ -98,6 +129,24 @@ class ReceptionEngine:
             else:
                 reply("I couldn’t reliably understand that request because the language service is unavailable. Your appointments are unchanged. Please try again, or ask for a person.", "service_unavailable", "The interpreter failed or did not return validated data.")
             return
+        if selecting and extracted.intent in (previous.intent, "unclear"):
+            previous = previous.model_copy(update={"hold": previous.hold or extracted.hold or has_hold(text)})
+            s.draft = previous
+            candidates, error = match_selection(selection_pool, extracted, self.clock())
+            tools.append(ToolResult(name="find_appointment", result=f"{len(candidates)} matching active appointment(s) among the selection choices."))
+            has_selection = any((extracted.appointment_id, extracted.doctor, extracted.original_date,
+                                 extracted.preferred_date, extracted.preferred_time))
+            if not has_selection or extracted.ambiguous or error or len(candidates) != 1:
+                ask_which(candidates or selection_pool, error or "Let’s identify the visit you want to change:")
+                return
+            # Selection details replace the old search, not the requested destination.
+            target = candidates[0]
+            extracted = previous.model_copy(update={"appointment_id": target.id, "doctor": target.doctor,
+                                                    "original_date": None, "hold": previous.hold or extracted.hold})
+            if extracted.intent == "cancel":
+                extracted.preferred_date = extracted.preferred_time = None
+            previous = None  # Do not merge the failed search criteria back in.
+            checks.append("The selected visit replaces earlier identification details; the requested destination is preserved.")
         if extracted.intent in ("book", "reschedule", "cancel", "availability") and previous:
             compatible = extracted.intent == previous.intent or (previous.intent == "availability" and extracted.intent == "book")
             if compatible:
@@ -146,17 +195,17 @@ class ReceptionEngine:
             if extracted.doctor:
                 candidates = [a for a in candidates if a.doctor == extracted.doctor]
             if extracted.original_date:
-                original, err = resolve_dates(extracted.original_date, self.clock())
-                if err or len(original) != 1:
-                    reply("Please provide the existing appointment reference from ‘Your next visits’ so I can identify it precisely.")
+                original, err = resolve_existing_dates(extracted.original_date, [a.date for a in candidates], self.clock())
+                if err:
+                    ask_which(candidates, "I couldn’t identify the original date. Here are the visits to choose from:")
                     return
-                candidates = [a for a in candidates if a.date == original[0].isoformat()]
+                candidates = [a for a in candidates if a.date in {day.isoformat() for day in original}]
             if extracted.intent == "cancel" and extracted.preferred_date:
-                dates, err = resolve_dates(extracted.preferred_date, self.clock())
-                if err or len(dates) != 1:
-                    reply("Which appointment should be cancelled? Please provide its appointment reference.")
+                dates, err = resolve_existing_dates(extracted.preferred_date, [a.date for a in candidates], self.clock())
+                if err:
+                    ask_which(candidates, "I couldn’t identify that date. Here are the visits to choose from:")
                     return
-                candidates = [a for a in candidates if a.date == dates[0].isoformat()]
+                candidates = [a for a in candidates if a.date in {day.isoformat() for day in dates}]
             if extracted.intent == "cancel" and extracted.preferred_time:
                 _, matches_time, err = resolve_time(extracted.preferred_time)
                 if err:
@@ -165,7 +214,8 @@ class ReceptionEngine:
                 candidates = [a for a in candidates if matches_time(a.time)]
             tools.append(ToolResult(name="find_appointment", result=f"{len(candidates)} matching active appointment(s) in this sample session."))
             if len(candidates) != 1:
-                reply("I couldn’t identify one matching visit. Please use an appointment reference from ‘Your next visits’, such as CK-1042.", reason="An exact, session-owned appointment is required.")
+                ask_which(candidates or [a for a in s.appointments if a.status == "confirmed"],
+                          "I found more than one matching visit:" if candidates else "I couldn’t match that description. Here are your active visits:")
                 return
             target = candidates[0]
             extracted.appointment_id = target.id
@@ -214,7 +264,8 @@ class ReceptionEngine:
             return
         if extracted.intent == "availability" or not exact or len(days) != 1:
             s.slots = slots[:5]
-            reply(f"Here are available times with Dr. {extracted.doctor}. Choose a time to review the details; selecting it does not confirm the visit.", "check_availability", "The patient needs to choose a specific slot.")
+            identified = f"I found this visit to move: {describe(target)}.\n" if target else ""
+            reply(identified + f"Here are available times with Dr. {extracted.doctor}. Choose a time to review the details; selecting it does not confirm the visit.", "check_availability", "The patient needs to choose a specific slot.")
             return
         slot = slots[0]
         if target and target.date == slot.date and target.time == slot.time:
@@ -263,7 +314,7 @@ class ReceptionEngine:
                 action = "cancel_appointment"
                 content = f"Your demo appointment {target.id} with Dr. {target.doctor} has been cancelled."
             tools.append(ToolResult(name=action, result=content))
-        s.pending, s.draft, s.slots = None, None, []
+        s.pending, s.draft, s.slots, s.appointment_choices = None, None, [], []
         decision = Decision(intent=proposal.kind, entities=proposal.model_dump(exclude={"summary", "id"}), action=action,
                             reason="The patient used the explicit proposal control.", checks=checks, tools=tools, source="confirmation policy")
         s.messages.append(Message(role="assistant", content=content, decision=decision))

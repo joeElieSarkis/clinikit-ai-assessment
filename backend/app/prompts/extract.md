@@ -26,6 +26,7 @@ ambiguous: true for conflicting choices, more than one doctor without a unique c
 
 FOLLOW-UPS
 Use recent_conversation/current_draft only to identify the active intent of a short follow-up. Output newly stated entities; the backend merges a compatible draft. Do not copy fields from an unrelated prior topic. "Use Dr. George on 2026-09-16 at 14:00" chooses a slot: retain reschedule if the active draft is reschedule; otherwise book. A plain yes, ok, or confirm is unclear; only the separate confirmation control can authorize an appointment mutation.
+If reception has listed existing visits and asked which one the patient means, a reply identifying a doctor, date, or time selects an EXISTING visit. Retain the active reschedule/cancel intent and extract only those newly stated selection details; the backend matches the listed visits and preserves the destination from the draft. Do not replace the requested destination with an assumed new date or time, and do not invent an appointment reference. A clearly new request or topic still takes its own intent.
 
 EXAMPLES
 "Book me Friday at 4 but don't confirm anything yet." => book, date Friday, time 4, hold true; doctor null.

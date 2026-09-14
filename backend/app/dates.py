@@ -10,6 +10,16 @@ from .clinic import minutes
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 
+def resolve_existing_dates(value: str, appointment_dates: list[str], now: datetime) -> tuple[list[date], str | None]:
+    """A bare weekday describes stored visits, rather than a new calendar request."""
+    weekday = value.strip().lower()
+    if weekday in WEEKDAYS:
+        dates = [date.fromisoformat(day) for day in dict.fromkeys(appointment_dates)]
+        return [day for day in dates if day.weekday() == WEEKDAYS.index(weekday)], None
+    # Explicit dates and qualifiers such as "this Monday" keep their normal meaning.
+    return resolve_dates(value, now)
+
+
 def resolve_dates(value: str | None, now: datetime) -> tuple[list[date], str | None]:
     if not value:
         return [], None
