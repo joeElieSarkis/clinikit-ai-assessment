@@ -1,10 +1,10 @@
 # Validation record
 
-Offline browser checks were completed on 12 September 2026; hosting checks followed on 13 September, and live Gemini checks on 14 September. The Python suite uses a fixed reference time of **2026-09-12 11:00, Asia/Beirut**. The browser uses real local time.
+Offline browser checks were completed on 12 September 2026; hosting checks followed on 13 September, and live Gemini checks on 14 September. The Python suite uses fixed reference times of **2026-09-12 11:00** and **2026-09-14 14:00, Asia/Beirut**. The Monday clock reproduces a real conversation failure that the original Saturday fixture missed. The browser uses real local time.
 
 ## Automated checks
 
-- 87 backend tests pass. This includes all ten supplied example messages, typed API input, state transitions, repeated requests, session ownership, expired/stale proposals, availability rechecks, conflicting appointment times, holds, unavailable model handling, hosting checks, and the Gemini adapter contract, including distinct daily-quota handling.
+- 133 backend tests pass. This includes the supplied example messages, typed API input, state transitions, repeated requests, session ownership, expired/stale proposals, availability rechecks, conflicting appointment times, holds, unavailable model handling, hosting checks, the Gemini adapter contract, daily-quota handling, and the conversation recovery checks below.
 - Ten supplied example intents match in offline demo evaluation. None changes an appointment without confirmation. Full observed responses and decision records are in `demo-results.json`.
 - The frontend passes TypeScript checking and a Vite production build.
 - The OpenAI adapter contract is tested with a mock client. **No live OpenAI requests were tested because no API key was configured.** The ten-example demo result must not be presented as an LLM benchmark.
@@ -29,6 +29,22 @@ Offline browser checks were completed on 12 September 2026; hosting checks follo
 - In the browser after the prompt change, that request produced `hold=false`, doctor Maya, date Tuesday, and time noon. The UI displayed **15 September 2026 at 12 pm** and left the existing appointment unchanged until confirmation. Pressing **Confirm appointment** added sample visit `CK-B2E7ABCD` while preserving Karim's visit. The decision record showed `gemini structured output` for interpretation and `confirmation policy` for the mutation.
 - The next browser request, “Could we move that visit with Maya to Wednesday at 3 pm?”, hit Google's daily quota. Both existing appointments remained unchanged and no proposal was left behind. A diagnostic response identified the quota as `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, limit **20**. No further generation tests were attempted after identifying that daily limit.
 - **Still pending:** live reschedule/cancel completion, short follow-up language tests, and a complete evaluation of the revised prompt. These await quota reset. A passing offline or mocked test is not presented as proof that the live model completes those flows.
+
+## Conversation recovery — 14 September 2026
+
+The reported conversation failed when the current day was Monday: the seeded visit was the following Monday, but the original-visit search resolved the bare weekday to today. A subsequent reference reply retained that failed date filter and repeated the same question.
+
+Regression tests now verify:
+
+- A bare Monday matches actual Monday visits. Explicit “this Monday” and calendar dates retain their stated meaning.
+- Multiple visits produce a list of real doctors, dates, and times. Replies such as “Karim”, “Dr. Krim”, “the second one”, “10 am”, and “the morning one” select from that list without a copied reference or provider call.
+- Multiple visits with the same doctor require another detail. Selecting the original visit’s time preserves a separately requested Wednesday destination and time.
+- Reference replies with trailing punctuation recover from failed date/doctor/time searches. Unknown and cancelled references never select another visit implicitly.
+- Greetings return “Hi!” without a provider request. Greetings and acknowledgements preserve an outstanding appointment-selection question. Every new message still invalidates old confirmation tokens.
+- A hold stated during clarification survives the eventual selection. Selection alone never mutates an appointment; the completed reschedule still requires its exact confirmation token.
+- The supplied examples run through the FastAPI endpoints under the Monday clock with expected actions and no unconfirmed changes. Missing-doctor/date/time follow-ups, “dr georg”, “tmrw”, ambiguous “4”, and the Friday booking hold are also exercised.
+
+These checks use the offline interpreter or a mock provider, including simulated provider outages for bounded replies. No further live Gemini calls were made. The added selection-context prompt instruction still needs live evaluation after the quota resets; the initial live results file is unchanged.
 
 ## Browser checks
 
