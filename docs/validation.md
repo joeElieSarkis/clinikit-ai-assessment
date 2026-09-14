@@ -1,10 +1,10 @@
 # Validation record
 
-Offline browser checks were completed on 12 September 2026; hosting checks followed on 13 September, and live Gemini checks on 14 September. The Python suite uses fixed reference times of **2026-09-12 11:00** and **2026-09-14 14:00, Asia/Beirut**. The Monday clock reproduces a real conversation failure that the original Saturday fixture missed. The browser uses real local time.
+Offline browser checks were completed on 12 September 2026; hosting checks followed on 13 September, and live Gemini checks on 14–15 September. The Python suite uses fixed reference times of **2026-09-12 11:00** and **2026-09-14 14:00, Asia/Beirut**. The Monday clock reproduces a real conversation failure that the original Saturday fixture missed. Live conversation evaluation uses the current Beirut time; the retry browser fixture uses a fixed Monday clock.
 
 ## Automated checks
 
-- 133 backend tests pass. This includes the supplied example messages, typed API input, state transitions, repeated requests, session ownership, expired/stale proposals, availability rechecks, conflicting appointment times, holds, unavailable model handling, hosting checks, the Gemini adapter contract, daily-quota handling, and the conversation recovery checks below.
+- 151 backend tests pass. This includes the supplied example messages, typed API input, state transitions, repeated requests, session ownership, expired/stale proposals, availability rechecks, conflicting appointment times, holds, provider recovery, hosting checks, the Gemini adapter contract, daily-quota handling, bounded server-error retry, and the conversation recovery checks below.
 - Ten supplied example intents match in offline demo evaluation. None changes an appointment without confirmation. Full observed responses and decision records are in `demo-results.json`.
 - The frontend passes TypeScript checking and a Vite production build.
 - The OpenAI adapter contract is tested with a mock client. **No live OpenAI requests were tested because no API key was configured.** The ten-example demo result must not be presented as an LLM benchmark.
@@ -12,6 +12,7 @@ Offline browser checks were completed on 12 September 2026; hosting checks follo
 - The evaluation command supports Gemini and an extended set of ten additional paraphrase/entity cases. It records raw extraction and distinguishes local routing from model interpretation. `--limit` supports smaller runs within a daily quota.
 - The extended **offline** evaluation was run and deliberately retains its failures: 14/20 intent matches, 6/9 entity-case matches, and zero unconfirmed mutations. One unfamiliar hold phrase yields a proposal, despite the intended hold. The evaluator correctly exits with code 1; this is a baseline limitation, not a failing unit test that was hidden. Full traces are in `demo-extended-results.json`. These extra cases have now been inspected during development, so they are a regression set rather than an independent held-out benchmark.
 - The testing dependencies emit two upstream deprecation warnings. No failing tests were suppressed.
+- The final local run also reported a permission warning while writing pytest's optional cache. All 151 tests completed successfully; the warning concerns the local cache directory, not an application failure.
 
 ## Hosting checks
 
@@ -28,7 +29,7 @@ Offline browser checks were completed on 12 September 2026; hosting checks follo
 - The failed case was “Could you pencil me in with Doctor Maya on Tuesday at noon?” Gemini set `hold=true`, preventing a proposal. The prompt was clarified to distinguish polite booking requests from actual requests to wait. The recorded full-suite result remains the initial run, before that prompt change.
 - In the browser after the prompt change, that request produced `hold=false`, doctor Maya, date Tuesday, and time noon. The UI displayed **15 September 2026 at 12 pm** and left the existing appointment unchanged until confirmation. Pressing **Confirm appointment** added sample visit `CK-B2E7ABCD` while preserving Karim's visit. The decision record showed `gemini structured output` for interpretation and `confirmation policy` for the mutation.
 - The next browser request, “Could we move that visit with Maya to Wednesday at 3 pm?”, hit Google's daily quota. Both existing appointments remained unchanged and no proposal was left behind. A diagnostic response identified the quota as `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, limit **20**. No further generation tests were attempted after identifying that daily limit.
-- **Still pending:** live reschedule/cancel completion, short follow-up language tests, and a complete evaluation of the revised prompt. These await quota reset. A passing offline or mocked test is not presented as proof that the live model completes those flows.
+- At the end of this initial run, reschedule/cancel completion and short follow-ups remained unverified live. They were subsequently completed with Flash-Lite in the 15 September checks below. The original results file remains unchanged.
 
 ## Conversation recovery — 14 September 2026
 
@@ -44,7 +45,19 @@ Regression tests now verify:
 - A hold stated during clarification survives the eventual selection. Selection alone never mutates an appointment; the completed reschedule still requires its exact confirmation token.
 - The supplied examples run through the FastAPI endpoints under the Monday clock with expected actions and no unconfirmed changes. Missing-doctor/date/time follow-ups, “dr georg”, “tmrw”, ambiguous “4”, and the Friday booking hold are also exercised.
 
-These checks use the offline interpreter or a mock provider, including simulated provider outages for bounded replies. No further live Gemini calls were made. The added selection-context prompt instruction still needs live evaluation after the quota resets; the initial live results file is unchanged.
+These regression checks use the offline interpreter or a mock provider, including simulated provider outages for bounded replies. Subsequent live evidence is recorded separately below; the original 3.6 extended result is unchanged. Free-form selection among multiple appointments still has less live coverage than the bounded local choices.
+
+## Provider recovery and live Flash-Lite checks — 15 September 2026
+
+- The reported held Friday booking followed by “Maya” was reproduced against Gemini 3.6 Flash. A diagnostic generation returned HTTP 503 `UNAVAILABLE`, with a high-demand explanation. This was a provider capacity failure, distinct from the earlier daily-quota response.
+- Explicit doctor, date, time, and visible slot replies now fill an active request locally. Regression tests cover “Maya”, “Dr. Maya”, quoted names, ambiguous “4”, “4 pm”, and the nearest available alternative while preserving the hold. Compound corrections still use the configured model.
+- HTTP 502/503/504 can receive one extra attempt after one second, within a configured 20-second budget. Other errors do not automatically retry. A second 3.6 conversation still failed on explicit resume; the partial trace is retained in [gemini-conversation-results.json](gemini-conversation-results.json).
+- **Gemini 3.5 Flash-Lite completed all 12 conversation steps**, including a held enquiry, doctor/time clarification, a 17:00 alternative, explicit resume, booking confirmation, rescheduling, cancellation, and mock callback. It used **four model calls and four HTTP requests**. Every appointment change required confirmation, and the original Karim visit remained unchanged. The full trace is in [gemini-flash-lite-conversation-results.json](gemini-flash-lite-conversation-results.json).
+- Flash-Lite also matched **11/11 workflow intents** and **1/1 additional entity case** with **zero unconfirmed mutations**. This run covers ten supplied examples plus “pencil me in”, using ten model calls and one local handoff. See [gemini-flash-lite-assessment-results.json](gemini-flash-lite-assessment-results.json). The remaining nine extended cases were not rerun on the new model.
+- The default, example configuration, local model setting, and Render configuration now select `gemini-3.5-flash-lite` explicitly. Provider failure never switches to another model or the offline baseline.
+- A browser test with an explicitly labelled injected failure verified **Retry message**. A George/Monday/16:00 proposal was invalidated when “Actually, make it Wednesday” failed with a simulated 503. Clicking retry produced a new George/Wednesday/16:00 proposal, preserving doctor/time without changing any appointment. Tests also verify that a different new message does not inherit the suspended draft and that the old confirmation token stays invalid.
+- A separate browser check against the real Flash-Lite backend completed the reported “Book me Friday at 4 but don’t confirm anything yet” → “Maya” → “4 pm” → 17:00 slot sequence. The initial request used Gemini; bounded follow-ups stayed local. The UI requested am/pm, offered the nearby available times, and retained the hold after a slot click. No confirmation control or new appointment appeared.
+- Errors expose safe diagnostic categories and HTTP status in the decision log; provider bodies and API keys are never displayed. Quota failures, timeouts, connection errors, invalid responses, and setup problems have distinct messages.
 
 ## Browser checks
 
@@ -63,4 +76,4 @@ Responsive checks cover 1440 × 900 desktop and 390 × 844 mobile layouts. These
 
 ## Known limits
 
-The rule baseline handles a bounded set of English expressions. The LLM still requires a real evaluation. The schedule, appointments, and handoffs are mocked; no patient identity, real notification, shared clinical calendar, holiday calendar, medical advice, or database is implemented. Safety-critical production guarantees require a real persistence and authorization architecture and broader testing.
+The rule baseline handles a bounded set of English expressions. Live model evidence covers a small regression sample, not a held-out language benchmark; free API capacity can still fail or reach its quota. The schedule, appointments, and handoffs are mocked; no patient identity, real notification, shared clinical calendar, holiday calendar, medical advice, or database is implemented. Safety-critical production guarantees require a real persistence and authorization architecture and broader testing.

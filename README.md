@@ -8,19 +8,19 @@ All patients, doctors, clinic hours, appointments, and handoffs are fictional. T
 
 ## Connect Gemini
 
-The live configuration uses **Gemini 3.6 Flash**. Create a key in [Google AI Studio](https://aistudio.google.com/apikey) using a project on the **Free tier with billing disabled**. Copy `.env.example` to `.env` once and fill in:
+The live configuration uses **Gemini 3.5 Flash-Lite**. Create a key in [Google AI Studio](https://aistudio.google.com/apikey) using a project on the **Free tier with billing disabled**. Copy `.env.example` to `.env` once and fill in:
 
 ```dotenv
 AI_PROVIDER=gemini
 GEMINI_API_KEY=your-own-key
-GEMINI_MODEL=gemini-3.6-flash
+GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
 Follow [gemini.md](docs/gemini.md) for setup and live checks. The backend sends the current fictional message, active draft, and up to eight recent messages to Google. The API key remains on the server and `.env` is excluded from Git and the Docker image. Google lists free input/output usage for this model, with account quotas and free-tier data-use terms; use only fictional patient information. See [pricing](https://ai.google.dev/gemini-api/docs/pricing) and [billing](https://ai.google.dev/gemini-api/docs/billing).
 
-Gemini interprets intent and entities. Python validates the schedule, controls changes, and constructs replies from verified results. A missing key is a setup error; a provider failure never silently switches to rules. **Live Gemini evaluation and a browser booking were completed on 14 September 2026**, with the limits and remaining checks recorded below.
+Gemini interprets intent and entities. Python validates the schedule, controls changes, and constructs replies from verified results. Bounded doctor/date/time replies fill an already understood request locally. A missing key is a setup error; a provider failure never silently switches models or providers. **A complete live conversation passed with Flash-Lite on 15 September 2026**, including a held booking, confirmation, rescheduling, and cancellation.
 
-This test project's free quota was **20 generation requests per day for this model**. The first evaluation used 19 model calls plus one local handoff; the browser booking used the remaining call. Check your own [active limits](https://ai.google.dev/gemini-api/docs/rate-limits) before running the full evaluation. Hosting on Render does not increase the model quota.
+The previously tested 3.6 Flash model reported a **20-request daily quota** and later returned repeated HTTP 503 high-demand errors. Flash-Lite completed the same conversation; its quota must be checked separately in [AI Studio](https://ai.google.dev/gemini-api/docs/rate-limits). Basic follow-ups save requests, but free API capacity is still limited. Hosting on Render does not increase that capacity.
 
 For an explicit offline baseline, set `AI_PROVIDER=demo` in `.env`. It requires no API key, shows **Offline demo**, and has limited English rule matching. Its results are not an LLM benchmark.
 
@@ -104,10 +104,12 @@ npm --prefix frontend run build
 npm --prefix frontend run format:check
 ```
 
-- **133 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, provider failures, hosted origins, serving the built interface, and the Gemini integration contract. Conversation regressions cover Monday date matching, multiple visits, selection by doctor/time/position, reference recovery, and greetings without provider calls.
+- **151 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, provider failures, hosted origins, serving the built interface, and the Gemini integration contract. Conversation regressions cover Monday date matching, multiple visits, selection by doctor/time/position, bounded follow-ups, suspended-draft retries, and greetings without provider calls.
 - **10/10 supplied example intents matched** in demo mode; **0 unconfirmed appointment mutations**. Full responses and traces are in [demo-results.json](docs/demo-results.json). These hand-picked examples are a smoke evaluation, not a general accuracy estimate.
 - On the **extended offline evaluation**, only **14/20 intents** and **6/9 checked entity cases** match; see [demo-extended-results.json](docs/demo-extended-results.json). In particular, a less familiar hold phrase still produces a proposal in the baseline, although it does not change an appointment. These failures are preserved rather than reported as passing checks.
-- The **initial live Gemini run** matched **20/20 workflow intents** and **8/9 checked entity cases**, with **0 unconfirmed mutations**. Nineteen cases called Gemini; one handoff used local routing. See [gemini-results.json](docs/gemini-results.json). It over-classified “pencil me in” as a hold. A prompt clarification fixed that phrasing in a subsequent live browser check, where the proposal was displayed and explicitly confirmed. The full suite was not rerun after that prompt change because the daily quota was reached. These are small regression results, not a general accuracy estimate.
+- The **historical 3.6 Flash run** matched **20/20 workflow intents** and **8/9 checked entity cases**, with **0 unconfirmed mutations**; see [gemini-results.json](docs/gemini-results.json). Nineteen cases called Gemini and one handoff used local routing. Its overly cautious interpretation of “pencil me in” led to a prompt clarification. These historical results are not the new default model’s score.
+- **Flash-Lite completed the live conversation** in [gemini-flash-lite-conversation-results.json](docs/gemini-flash-lite-conversation-results.json): a held Friday enquiry, Maya/time clarification, nearby alternative selection, explicit booking confirmation, rescheduling, cancellation, and mock handoff. It used four model calls and four HTTP requests. All changes required separate confirmation and Karim’s original visit was preserved.
+- **Flash-Lite matched 11/11 workflow intents and 1/1 additional entity case**, with zero unconfirmed mutations: ten supplied examples plus “pencil me in”. Ten cases called Gemini and one handoff used local routing. See [gemini-flash-lite-assessment-results.json](docs/gemini-flash-lite-assessment-results.json). The full 20-case extended set has not been rerun on this model.
 - Browser checks cover booking, rescheduling, cancellation, dialogs, and responsive layouts. Details and limitations are in [validation.md](docs/validation.md).
 - Two upstream deprecation warnings occur in the Starlette testing dependencies; the tests pass.
 
@@ -117,7 +119,9 @@ For a short live check after configuring a key and checking the remaining quota:
 .\.venv\Scripts\python.exe -m backend.evaluate --provider gemini --suite extended --limit 3 --output work/gemini-smoke-results.json
 ```
 
-Omit `--limit 3` for all twenty cases when enough daily quota remains, and choose a new output path to preserve prior results. The extended evaluation adds ten paraphrase/entity cases to the ten supplied examples. It records raw extraction, entity checks, local policy routing, prompt hash, and failures separately. Live cases are spaced 12 seconds apart by default; this limits request frequency but does not increase the daily allowance. An unavailable provider stops the run and saves the observed failure rather than retrying or substituting demo results.
+Omit `--limit 3` for all twenty cases when enough daily quota remains, and choose a new output path to preserve prior results. The extended evaluation adds ten paraphrase/entity cases to the ten supplied examples. It records raw extraction, entity checks, local policy routing, prompt hash, and failures separately. Live cases are spaced 12 seconds apart by default. The adapter allows one bounded retry for HTTP 502/503/504; quota errors are not automatically retried. An unresolved provider failure stops the evaluation and saves the partial result.
+
+For the complete conversation check, run `.\.venv\Scripts\python.exe -m backend.evaluate_conversations --provider gemini --output work/conversation-results.json`. It normally uses four model requests, with at most one extra attempt per temporary server failure. Use `--provider demo --delay 0` for the offline workflow check.
 
 ## Project guide
 

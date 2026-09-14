@@ -1,0 +1,572 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "reference_time": "2026-09-15T00:00:50.075326+03:00",
+  "evaluated_at": "2026-09-15T00:01:31.152978+03:00",
+  "prompt_sha256": "2dce646354cffd2f2ac1fb7ee196f8d00c9ab04aadf34612038bde99771e3903",
+  "passed": true,
+  "failure": null,
+  "interpreter_calls": 4,
+  "http_requests": 4,
+  "scope": "One scripted conversation with a held booking, explicit confirmations, reschedule, cancellation, and mock handoff. Bounded details use local routing. Not a general language benchmark.",
+  "steps": [
+    {
+      "operation": "message",
+      "message": "hi",
+      "response": "Hi! How can I help you today?",
+      "decision": {
+        "intent": "unclear",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "greet",
+        "reason": "A greeting does not need a language-provider request.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [],
+        "source": "local routing policy",
+        "duration_ms": 0
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "message",
+      "message": "Book me Friday at 4 but don’t confirm anything yet.",
+      "response": "I won’t book anything yet. Which doctor would you like to see: Dr. George, Dr. Karim, or Dr. Maya?",
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": null,
+          "preferred_date": "Friday",
+          "preferred_time": "4",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "Missing information requires clarification.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "A request to wait prevents a confirmation proposal."
+        ],
+        "tools": [],
+        "source": "gemini structured output",
+        "duration_ms": 1259
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "message",
+      "message": "Maya",
+      "response": "I won’t book anything yet. Did you mean 4:00 am or 4:00 pm? Please include am or pm.",
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "Maya",
+          "preferred_date": "Friday",
+          "preferred_time": "4",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "ask_for_more_information",
+        "reason": "The time must be unambiguous before it can be used.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "An explicit doctor, date, time, or slot selection fills the active validated request without a provider call.",
+          "A request to wait prevents a confirmation proposal."
+        ],
+        "tools": [],
+        "source": "local routing policy",
+        "duration_ms": 1
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "message",
+      "message": "4 pm",
+      "response": "That time isn’t available in the sample schedule. Here are other available times on your requested day(s).",
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "Maya",
+          "preferred_date": "Friday",
+          "preferred_time": "4 pm",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "check_availability",
+        "reason": "No matching slot is available; the requested time is not invented.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "An explicit doctor, date, time, or slot selection fills the active validated request without a provider call.",
+          "A request to wait prevents a confirmation proposal."
+        ],
+        "tools": [
+          {
+            "name": "check_availability",
+            "result": "0 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "local routing policy",
+        "duration_ms": 0
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "message",
+      "message": "Use Dr. Maya on 2026-09-18 at 17:00",
+      "response": "I won’t book or change anything yet. These times are available to explore. When you’re ready, tell me explicitly that you’d like to book or reschedule.",
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "Maya",
+          "preferred_date": "2026-09-18",
+          "preferred_time": "17:00",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": true,
+          "ambiguous": false
+        },
+        "action": "check_availability",
+        "reason": "Availability is read-only; the patient asked to wait.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "An explicit doctor, date, time, or slot selection fills the active validated request without a provider call.",
+          "A request to wait prevents a confirmation proposal.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "check_availability",
+            "result": "1 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "local routing policy",
+        "duration_ms": 1
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "message",
+      "message": "I am ready to book Dr. Maya on 2026-09-18 at 17:00. Please prepare the confirmation.",
+      "response": "I’ve prepared the details below. Please review and confirm when you’re ready. Your appointments haven’t changed yet.",
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "Maya",
+          "preferred_date": "2026-09-18",
+          "preferred_time": "17:00",
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_confirmation",
+        "reason": "A specific available slot is staged behind an explicit confirmation.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "check_availability",
+            "result": "1 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 1318
+      },
+      "pending": {
+        "doctor": "Maya",
+        "date": "2026-09-18",
+        "time": "17:00",
+        "id": "785f110e-34df-40c3-abee-628db7bde43d",
+        "kind": "book",
+        "appointment_id": null,
+        "summary": "Dr. Maya · Friday, 18 September 2026 · 5:00 PM (Beirut)"
+      },
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "confirm",
+      "message": "book",
+      "response": "Your demo appointment is confirmed.\nDr. Maya · Friday, 18 September 2026 · 5:00 PM (Beirut)\nReference: CK-DCD81DCB",
+      "decision": {
+        "intent": "book",
+        "entities": {
+          "doctor": "Maya",
+          "date": "2026-09-18",
+          "time": "17:00",
+          "kind": "book",
+          "appointment_id": null
+        },
+        "action": "create_appointment",
+        "reason": "The patient used the explicit proposal control.",
+        "checks": [
+          "Confirmation token matches the current proposal.",
+          "Only this exact proposal may be applied.",
+          "Availability was rechecked immediately before the change."
+        ],
+        "tools": [
+          {
+            "name": "create_appointment",
+            "result": "Your demo appointment is confirmed.\nDr. Maya · Friday, 18 September 2026 · 5:00 PM (Beirut)\nReference: CK-DCD81DCB"
+          }
+        ],
+        "source": "confirmation policy",
+        "duration_ms": 0
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        },
+        {
+          "doctor": "Maya",
+          "date": "2026-09-18",
+          "time": "17:00",
+          "id": "CK-DCD81DCB",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "message",
+      "message": "Could you move my visit with Maya to next Wednesday at 3 pm?",
+      "response": "I’ve prepared the details below. Please review and confirm when you’re ready. Your appointments haven’t changed yet.",
+      "decision": {
+        "intent": "reschedule",
+        "entities": {
+          "doctor": "Maya",
+          "preferred_date": "next Wednesday",
+          "preferred_time": "3 pm",
+          "original_date": null,
+          "appointment_id": "CK-DCD81DCB",
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_confirmation",
+        "reason": "A specific available slot is staged behind an explicit confirmation.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "The existing appointment belongs to the current sample session.",
+          "Date resolved against the current time in Asia/Beirut.",
+          "Schedule and the sample patient’s existing appointments were checked."
+        ],
+        "tools": [
+          {
+            "name": "find_appointment",
+            "result": "1 matching active appointment(s) in this sample session."
+          },
+          {
+            "name": "check_availability",
+            "result": "1 matching future slot(s) in the mock schedule."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 1256
+      },
+      "pending": {
+        "doctor": "Maya",
+        "date": "2026-09-23",
+        "time": "15:00",
+        "id": "f883f985-2309-4171-b3f5-8b22a1aabccc",
+        "kind": "reschedule",
+        "appointment_id": "CK-DCD81DCB",
+        "summary": "From: Dr. Maya · Friday, 18 September 2026 · 5:00 PM (Beirut)\nTo: Dr. Maya · Wednesday, 23 September 2026 · 3:00 PM (Beirut)"
+      },
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        },
+        {
+          "doctor": "Maya",
+          "date": "2026-09-18",
+          "time": "17:00",
+          "id": "CK-DCD81DCB",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "confirm",
+      "message": "reschedule",
+      "response": "Your demo appointment CK-DCD81DCB has been moved.\nDr. Maya · Wednesday, 23 September 2026 · 3:00 PM (Beirut)",
+      "decision": {
+        "intent": "reschedule",
+        "entities": {
+          "doctor": "Maya",
+          "date": "2026-09-23",
+          "time": "15:00",
+          "kind": "reschedule",
+          "appointment_id": "CK-DCD81DCB"
+        },
+        "action": "reschedule_appointment",
+        "reason": "The patient used the explicit proposal control.",
+        "checks": [
+          "Confirmation token matches the current proposal.",
+          "Only this exact proposal may be applied.",
+          "Availability was rechecked immediately before the change."
+        ],
+        "tools": [
+          {
+            "name": "reschedule_appointment",
+            "result": "Your demo appointment CK-DCD81DCB has been moved.\nDr. Maya · Wednesday, 23 September 2026 · 3:00 PM (Beirut)"
+          }
+        ],
+        "source": "confirmation policy",
+        "duration_ms": 0
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        },
+        {
+          "doctor": "Maya",
+          "date": "2026-09-23",
+          "time": "15:00",
+          "id": "CK-DCD81DCB",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "message",
+      "message": "Please cancel my visit with Dr. Maya.",
+      "response": "Please review the cancellation for CK-DCD81DCB below. Your visit is still confirmed until you choose ‘Confirm cancellation’.",
+      "decision": {
+        "intent": "cancel",
+        "entities": {
+          "doctor": "Maya",
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": "CK-DCD81DCB",
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "ask_for_confirmation",
+        "reason": "Cancellation is staged; it has not been executed.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated.",
+          "The existing appointment belongs to the current sample session."
+        ],
+        "tools": [
+          {
+            "name": "find_appointment",
+            "result": "1 matching active appointment(s) in this sample session."
+          }
+        ],
+        "source": "gemini structured output",
+        "duration_ms": 1240
+      },
+      "pending": {
+        "doctor": "Maya",
+        "date": "2026-09-23",
+        "time": "15:00",
+        "id": "20f7f90f-053d-414c-a9f5-7a9491c0011d",
+        "kind": "cancel",
+        "appointment_id": "CK-DCD81DCB",
+        "summary": "Cancel CK-DCD81DCB\nDr. Maya · Wednesday, 23 September 2026 · 3:00 PM (Beirut)"
+      },
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        },
+        {
+          "doctor": "Maya",
+          "date": "2026-09-23",
+          "time": "15:00",
+          "id": "CK-DCD81DCB",
+          "status": "confirmed"
+        }
+      ]
+    },
+    {
+      "operation": "confirm",
+      "message": "cancel",
+      "response": "Your demo appointment CK-DCD81DCB with Dr. Maya has been cancelled.",
+      "decision": {
+        "intent": "cancel",
+        "entities": {
+          "doctor": "Maya",
+          "date": "2026-09-23",
+          "time": "15:00",
+          "kind": "cancel",
+          "appointment_id": "CK-DCD81DCB"
+        },
+        "action": "cancel_appointment",
+        "reason": "The patient used the explicit proposal control.",
+        "checks": [
+          "Confirmation token matches the current proposal.",
+          "Only this exact proposal may be applied."
+        ],
+        "tools": [
+          {
+            "name": "cancel_appointment",
+            "result": "Your demo appointment CK-DCD81DCB with Dr. Maya has been cancelled."
+          }
+        ],
+        "source": "confirmation policy",
+        "duration_ms": 0
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        },
+        {
+          "doctor": "Maya",
+          "date": "2026-09-23",
+          "time": "15:00",
+          "id": "CK-DCD81DCB",
+          "status": "cancelled"
+        }
+      ]
+    },
+    {
+      "operation": "message",
+      "message": "Can somebody from the clinic call me?",
+      "response": "I’ve recorded callback request H-001 for reception. This is a demo, so it won’t trigger a real call.",
+      "decision": {
+        "intent": "handoff",
+        "entities": {
+          "doctor": null,
+          "preferred_date": null,
+          "preferred_time": null,
+          "original_date": null,
+          "appointment_id": null,
+          "hold": false,
+          "ambiguous": false
+        },
+        "action": "handoff_to_human",
+        "reason": "Human assistance was requested or the message requires clinical judgment.",
+        "checks": [
+          "No appointment change is permitted through the message endpoint.",
+          "Any earlier proposal has been invalidated."
+        ],
+        "tools": [
+          {
+            "name": "handoff_to_human",
+            "result": "Mock handoff H-001 recorded; no external message sent."
+          }
+        ],
+        "source": "local routing policy",
+        "duration_ms": 0
+      },
+      "pending": null,
+      "appointments": [
+        {
+          "doctor": "Karim",
+          "date": "2026-09-21",
+          "time": "10:00",
+          "id": "CK-1042",
+          "status": "confirmed"
+        },
+        {
+          "doctor": "Maya",
+          "date": "2026-09-23",
+          "time": "15:00",
+          "id": "CK-DCD81DCB",
+          "status": "cancelled"
+        }
+      ]
+    }
+  ]
+}
