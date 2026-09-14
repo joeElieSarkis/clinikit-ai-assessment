@@ -45,8 +45,7 @@ class GeminiInterpreter:
         self.prompt = (Path(__file__).parent / "prompts" / "extract.md").read_text(encoding="utf-8")
 
     def extract(self, text: str, draft: Extraction | None, messages: list[Message], now: datetime) -> Extraction:
-        # A small shared cooldown limits bursts without queues or automatic retries.
-        # Google still enforces the actual project quota, which varies by account.
+        # The shared cooldown limits bursts; Google enforces the project quota.
         with self._lock:
             if self._clock() < self._next_request:
                 raise GeminiUnavailable(self._cooldown_code)
@@ -59,7 +58,7 @@ class GeminiInterpreter:
             "current_message": text,
         }
         schema = Extraction.model_json_schema()
-        # Require every field explicitly; nullable entities remain nullable.
+        # Require all keys, including fields whose value is null.
         schema["required"] = list(schema["properties"])
         for field in schema["properties"].values():
             field.pop("default", None)
@@ -67,8 +66,7 @@ class GeminiInterpreter:
             "responseMimeType": "application/json", "responseJsonSchema": schema,
             "candidateCount": 1, "maxOutputTokens": 2048,
         }
-        # 2.5 Flash supports disabling thinking for this bounded extraction task.
-        # Other models keep their own defaults rather than receiving incompatible settings.
+        # The 2.5 thinking option is not compatible with every model.
         if self.model == "gemini-2.5-flash":
             config["thinkingConfig"] = {"thinkingBudget": 0}
         payload = {

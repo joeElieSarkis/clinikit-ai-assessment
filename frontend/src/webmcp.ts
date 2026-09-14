@@ -50,10 +50,10 @@ export function registerReceptionReader(read: () => Session | null) {
         { signal: lifecycle.signal },
       ),
     ).catch(() => {
-      /* Optional browser integration. The UI remains available. */
+      /* Registration failure must not interrupt the chat. */
     });
   } catch {
-    /* Older browsers use the same visible interface. */
+    /* The browser may expose the API without supporting registration. */
   }
   return () => lifecycle.abort();
 }

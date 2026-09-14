@@ -57,7 +57,7 @@ Vague phrases such as “my doctor” never imply access to a medical record. Un
 
 ## Interface decisions
 
-The primary activity is a conversation with a nearby visit ledger. Typography, spacing, a deep green reception rail, and warm neutral paper carry the design. There is no analytics dashboard or irrelevant metric grid. The technical inspector is separate from the patient flow. Native buttons, labeled inputs, a modal dialog, keyboard submission, reduced-motion support, and mobile disclosure of the agenda support usability. Fonts are bundled locally, so the page needs no font CDN.
+The conversation sits beside the appointment list so patients can refer to existing visits while typing. The decision inspector is available on demand. Native buttons, labeled inputs, keyboard submission, modal dialogs, reduced-motion support, and a collapsible mobile appointment list support usability. Fonts are bundled locally.
 
 ## What production would need
 

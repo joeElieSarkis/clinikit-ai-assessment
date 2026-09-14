@@ -19,7 +19,7 @@ def detail_reply(text: str, draft: Extraction | None, now: datetime) -> Extracti
         return Extraction(intent=draft.intent, preferred_date=t)
     if re.fullmatch(r'(?:(?:at|after|before|around)\s+)?(?:\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?|morning|afternoon|evening|noon|midday|midnight)', t):
         return Extraction(intent=draft.intent, preferred_time=t)
-    # This is the exact visible slot-selector wording used by the frontend.
+    # Match the message sent by the frontend's slot buttons.
     slot = re.fullmatch(r'use dr\. ([a-z]+) on (\d{4}-\d{2}-\d{2}) at (\d{2}:\d{2})', t)
     if slot and slot[1].title() in DOCTORS:
         return Extraction(intent='reschedule' if draft.intent == 'reschedule' else 'book',

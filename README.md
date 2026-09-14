@@ -1,14 +1,14 @@
-# Reception / CliniKit
+# CliniKit reception
 
-A clinic appointment assistant for **Exercise 1** of the CliniKit AI trainee assessment. React + TypeScript on the patient side; Python + FastAPI and Gemini for intent and entity extraction.
+A clinic appointment assistant built with React, TypeScript, FastAPI, and Gemini. It handles booking, rescheduling, cancellation, opening hours, availability, and requests for a receptionist.
 
-The central design choice: **understanding a request does not authorize an appointment change**. The assistant extracts structured information, validates it against a mock schedule, and prepares a proposal. Only an explicit confirmation of that exact proposal can create, move, or cancel a visit.
+This repository covers **Exercise 1** of the CliniKit AI trainee assessment. All clinic data and appointments are fictional. **Exercise 2 is not included.**
 
-All patients, doctors, clinic hours, appointments, and handoffs are fictional. This is an assessment demonstration. Exercise 2 is not included.
+## Run locally
 
-## Connect Gemini
+Requirements: Python 3.11+, Node.js 22.12+, and npm. Tested with Python 3.12 and Node.js 22.18.
 
-The live configuration uses **Gemini 3.5 Flash-Lite**. Create a key in [Google AI Studio](https://aistudio.google.com/apikey) using a project on the **Free tier with billing disabled**. Copy `.env.example` to `.env` once and fill in:
+Copy `.env.example` to `.env` on first setup. For live interpretation, configure a Google AI Studio key from a project on the Free tier with billing disabled:
 
 ```dotenv
 AI_PROVIDER=gemini
@@ -16,19 +16,9 @@ GEMINI_API_KEY=your-own-key
 GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
-Follow [gemini.md](docs/gemini.md) for setup and live checks. The backend sends the current fictional message, active draft, and up to eight recent messages to Google. The API key remains on the server and `.env` is excluded from Git and the Docker image. Google lists free input/output usage for this model, with account quotas and free-tier data-use terms; use only fictional patient information. See [pricing](https://ai.google.dev/gemini-api/docs/pricing) and [billing](https://ai.google.dev/gemini-api/docs/billing).
+For a quick run without an API key, set `AI_PROVIDER=demo` instead. The interface labels this **Offline demo**; it uses a limited rule interpreter. See [Gemini setup](docs/gemini.md) for key configuration, quotas, and troubleshooting.
 
-Gemini interprets intent and entities. Python validates the schedule, controls changes, and constructs replies from verified results. Bounded doctor/date/time replies fill an already understood request locally. A missing key is a setup error; a provider failure never silently switches models or providers. **A complete live conversation passed with Flash-Lite on 15 September 2026**, including a held booking, confirmation, rescheduling, and cancellation.
-
-The previously tested 3.6 Flash model reported a **20-request daily quota** and later returned repeated HTTP 503 high-demand errors. Flash-Lite completed the same conversation; its quota must be checked separately in [AI Studio](https://ai.google.dev/gemini-api/docs/rate-limits). Basic follow-ups save requests, but free API capacity is still limited. Hosting on Render does not increase that capacity.
-
-For an explicit offline baseline, set `AI_PROVIDER=demo` in `.env`. It requires no API key, shows **Offline demo**, and has limited English rule matching. Its results are not an LLM benchmark.
-
-## Run locally
-
-Requirements: **Python 3.11+**, **Node.js 22.12+** (tested with Python 3.12 and Node 22.18), and npm. Configure `.env` above before starting the server.
-
-From the repository root, on Windows PowerShell:
+From the repository root, in Windows PowerShell:
 
 ```powershell
 py -3.12 -m venv .venv
@@ -46,97 +36,70 @@ npm --prefix frontend ci
 .venv/bin/python run.py
 ```
 
-Open **http://127.0.0.1:5173**. Interactive API documentation is at **http://127.0.0.1:8000/docs**. Stop both services with Ctrl+C. Restart the launcher after changing Python code or `.env`; Vite refreshes frontend changes automatically. Ports 8000 and 5173 must be free.
+Open [the interface](http://127.0.0.1:5173/) or [the API documentation](http://127.0.0.1:8000/docs). Ctrl+C stops both services. Restart after changing Python code or `.env`; frontend changes reload automatically. Ports 8000 and 5173 must be available.
 
-VS Code includes **Run reception** and **Test reception** tasks under *Terminal → Run Task*. Open the repository folder, not just the frontend.
+VS Code tasks are included under **Terminal → Run Task → Run reception / Test reception**.
 
-For a built interface served by Python alone:
+## Approach
 
-```powershell
-npm --prefix frontend run build
-.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
-```
+Gemini extracts intent, doctor, date, time, appointment reference, and ambiguity/hold flags into a validated schema. Python resolves dates in Beirut time, checks the mock schedule, asks for missing details, and constructs responses from the results. Short doctor/date/time replies fill the active request locally; compound corrections use the model.
 
-Then open http://127.0.0.1:8000. Build before starting the server.
+Booking, rescheduling, and cancellation require confirmation of an exact proposal. A chat message cannot change an appointment. Holds persist through clarification, multiple matching visits trigger a selection question, and failed requests can be retried without losing earlier validated details. Every new message invalidates the previous confirmation token.
 
-## Share a free hosted demo
-
-The repository includes a Docker build and a Render configuration for **one Free web service** serving both the React interface and Python API. It sets `AI_PROVIDER=gemini` and prompts for `GEMINI_API_KEY` as a server secret. Use a Free-tier Google project; selecting a model in code does not control account billing. No paid database or other service is configured.
-
-Follow [deployment.md](docs/deployment.md) after pushing your repository yourself. GitHub Pages can host static frontend files, but cannot run this project's Python API on its own. Render's free service sleeps after inactivity, so the first visit can take about a minute to load; sample sessions reset when the server restarts.
-
-**Deployment status:** prepared and checked locally; no public deployment has been created or verified.
-
-## Optional alternative provider
-
-The existing OpenAI adapter remains available for comparison. It is not part of the free Gemini setup. To use it, set these values in the root `.env`:
-
-```dotenv
-AI_PROVIDER=openai
-OPENAI_API_KEY=your-own-key
-OPENAI_MODEL=gpt-4.1-mini
-```
-
-Restart the backend. The interface should say **OpenAI**. `.env` is ignored by Git; keys are never sent to the frontend. Use fictional messages: in this mode, the current message and up to eight recent conversation messages are sent to OpenAI. `store=False` is set on requests; this is not a claim of zero provider retention or healthcare compliance. API calls use the configured account and may incur charges.
-
-The adapter uses the Responses API with Pydantic Structured Outputs. The model is configurable; choose a model that supports those features. A refusal, timeout, or invalid output clears the proposal and returns a safe error. It never silently switches to demo mode.
-
-**The OpenAI adapter has not been evaluated with a real key.** Unit tests mock that provider to verify the integration contract and failure path. Demo mode is a bounded English rule interpreter, not an LLM or a claim of broad language understanding.
+The directory and schedule are structured data queried directly. There is no document corpus or RAG pipeline. [Approach and technical decisions](docs/approach.md) covers prompting, state handling, assumptions, and production improvements.
 
 ## Try it
 
-1. **Booking:** “Book Dr. George Monday at 4 pm.” Review the proposed date and press **Confirm appointment**. A bare “4” asks for am/pm.
-2. **Rescheduling:** “Move my appointment from Monday to Wednesday.” Choose an available time, review the old and new visit, and confirm. The original reference is preserved.
-3. **Cancellation:** “Cancel my appointment with Dr. Karim.” The visit remains active until **Confirm cancellation** is selected.
-4. **Hold:** “I might want to see Dr. George Monday at 4 pm, but don’t book anything yet.” No proposal or appointment change is created. A hold persists across short follow-ups until an explicit request to resume.
-5. **Facts and handoff:** Ask opening hours or request a person. The latter records a mock handoff and explicitly says no real person was contacted.
+- **Book:** “Book Dr. George Monday at 4 pm.” Review the date and time, then select **Confirm appointment**.
+- **Reschedule:** “Move my appointment from Monday to Wednesday.” If several visits match, identify one by doctor, time, or list position.
+- **Cancel:** “Cancel my appointment with Dr. Karim.” The visit stays active until cancellation is confirmed.
+- **Hold:** “Book me Friday at 4 but don’t confirm anything yet.” Reply “Maya”, then “4 pm”. Selecting an available alternative keeps the request on hold until an explicit request to resume.
+- **Clinic questions:** “What time does the clinic close?” or “Do you have anything available after 5 tomorrow?”
+- **Handoff:** “Can somebody from the clinic call me?” This records a mock request; it does not arrange a real callback.
 
-Use **Decision log** to inspect extracted fields, policy checks, selected actions, and actual mock tool results. The log describes execution; it does not expose private model reasoning. On mobile, expand **Your visits & clinic details** to see appointments. The reset control starts a fresh sample patient.
+**View decision** shows extracted fields, policy checks, the selected action, and mock-tool results. Dates use the current Beirut clock, so “tomorrow” on Saturday resolves to Sunday, when the mock clinic is closed. The reset control starts a fresh sample patient session.
 
-Relative dates resolve against the current Beirut time. “Tomorrow” on Saturday is Sunday, when this mock clinic is closed. The automated examples freeze the clock so results are repeatable.
+## Validation
 
-## Validation and results
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Backend tests | 151 passed | [Validation record](docs/validation.md) |
+| Live Gemini 3.5 Flash-Lite examples | 11/11 workflow intents, 1/1 additional entity case, no unconfirmed mutations | [Recorded results](docs/gemini-flash-lite-assessment-results.json) |
+| Live conversation | Held booking, clarification, confirmation, rescheduling, cancellation, and handoff passed; four model calls | [Conversation trace](docs/gemini-flash-lite-conversation-results.json) |
+| Frontend | TypeScript, production build, formatting, and desktop/mobile browser checks passed | [Validation record](docs/validation.md) |
+
+The live example run covers the nine example messages, the additional ambiguous case in the brief, and one “pencil me in” paraphrase. Ten cases used Gemini and one handoff used local routing. The remaining nine extended cases have not been evaluated on Flash-Lite. These are small regression checks, not a general language accuracy estimate.
+
+The offline baseline matched [10/10 supplied cases](docs/demo-results.json), but only [14/20 intents and 6/9 entity cases](docs/demo-extended-results.json) in the extended set. Its unfamiliar hold-phrase failure produced a proposal but no appointment change. Earlier 3.6 Flash results and provider failures remain in the [validation record](docs/validation.md).
+
+Run local checks:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe -m backend.evaluate --provider demo --output docs/demo-results.json
+.\.venv\Scripts\python.exe -m backend.evaluate --provider demo --output work/demo-results.json
 npm --prefix frontend run build
 npm --prefix frontend run format:check
 ```
 
-- **151 passing backend tests**: assessment examples, multi-turn flows, confirmation requirements, repeat requests, session isolation, schedule conflicts, invalid dates/times, unknown doctors, holds, provider failures, hosted origins, serving the built interface, and the Gemini integration contract. Conversation regressions cover Monday date matching, multiple visits, selection by doctor/time/position, bounded follow-ups, suspended-draft retries, and greetings without provider calls.
-- **10/10 supplied example intents matched** in demo mode; **0 unconfirmed appointment mutations**. Full responses and traces are in [demo-results.json](docs/demo-results.json). These hand-picked examples are a smoke evaluation, not a general accuracy estimate.
-- On the **extended offline evaluation**, only **14/20 intents** and **6/9 checked entity cases** match; see [demo-extended-results.json](docs/demo-extended-results.json). In particular, a less familiar hold phrase still produces a proposal in the baseline, although it does not change an appointment. These failures are preserved rather than reported as passing checks.
-- The **historical 3.6 Flash run** matched **20/20 workflow intents** and **8/9 checked entity cases**, with **0 unconfirmed mutations**; see [gemini-results.json](docs/gemini-results.json). Nineteen cases called Gemini and one handoff used local routing. Its overly cautious interpretation of “pencil me in” led to a prompt clarification. These historical results are not the new default model’s score.
-- **Flash-Lite completed the live conversation** in [gemini-flash-lite-conversation-results.json](docs/gemini-flash-lite-conversation-results.json): a held Friday enquiry, Maya/time clarification, nearby alternative selection, explicit booking confirmation, rescheduling, cancellation, and mock handoff. It used four model calls and four HTTP requests. All changes required separate confirmation and Karim’s original visit was preserved.
-- **Flash-Lite matched 11/11 workflow intents and 1/1 additional entity case**, with zero unconfirmed mutations: ten supplied examples plus “pencil me in”. Ten cases called Gemini and one handoff used local routing. See [gemini-flash-lite-assessment-results.json](docs/gemini-flash-lite-assessment-results.json). The full 20-case extended set has not been rerun on this model.
-- Browser checks cover booking, rescheduling, cancellation, dialogs, and responsive layouts. Details and limitations are in [validation.md](docs/validation.md).
-- Two upstream deprecation warnings occur in the Starlette testing dependencies; the tests pass.
-
-For a short live check after configuring a key and checking the remaining quota:
+For a live conversation check after configuring Gemini:
 
 ```powershell
-.\.venv\Scripts\python.exe -m backend.evaluate --provider gemini --suite extended --limit 3 --output work/gemini-smoke-results.json
+.\.venv\Scripts\python.exe -m backend.evaluate_conversations --provider gemini --output work/conversation-results.json
 ```
 
-Omit `--limit 3` for all twenty cases when enough daily quota remains, and choose a new output path to preserve prior results. The extended evaluation adds ten paraphrase/entity cases to the ten supplied examples. It records raw extraction, entity checks, local policy routing, prompt hash, and failures separately. Live cases are spaced 12 seconds apart by default. The adapter allows one bounded retry for HTTP 502/503/504; quota errors are not automatically retried. An unresolved provider failure stops the evaluation and saves the partial result.
+This normally uses four model calls, spaced 12 seconds apart. The adapter permits one extra attempt for HTTP 502/503/504; quota errors are not automatically retried. See [evaluation instructions](docs/gemini.md) for the extended suite and saved failure records.
 
-For the complete conversation check, run `.\.venv\Scripts\python.exe -m backend.evaluate_conversations --provider gemini --output work/conversation-results.json`. It normally uses four model requests, with at most one extra attempt per temporary server failure. Use `--provider demo --delay 0` for the offline workflow check.
+## Deployment
 
-## Project guide
+The included Dockerfile and Render configuration serve the built React interface and Python API as one Free web service. GitHub Pages alone cannot run the Python API. [Deployment instructions](docs/deployment.md) cover server secrets, service configuration, and checks for the public URL.
 
-| File | Responsibility |
-| --- | --- |
-| `backend/app/models.py` | Typed input, extraction, proposals, and responses |
-| `backend/app/interpreter.py` | Interchangeable demo and OpenAI extraction |
-| `backend/app/gemini.py` | Gemini REST adapter, structured validation, and quota handling |
-| `backend/app/providers.py` | Explicit provider selection for the server and evaluation |
-| `backend/app/prompts/extract.md` | Intent rules, entity rules, trust boundary, examples |
-| `backend/app/engine.py` | Conversation state, policy checks, proposal and confirmation |
-| `backend/app/clinic.py` | Mock facts, schedule, and 30-minute conflict checks |
-| `backend/app/dates.py` | Date normalization and time disambiguation |
-| `backend/app/main.py` | API, validation, session isolation, idempotency |
-| `frontend/src/App.tsx` | Conversation, visit ledger, and decision inspector |
-| `frontend/src/styles.css` | Custom responsive interface, local fonts, reduced motion |
+The production frontend build and Python hosting checks passed locally. A Docker image and public deployment have not been verified. A hosted demo is optional for the assessment.
 
-See [approach.md](docs/approach.md) for decisions, assumptions, and production improvements. AI assistance was used in implementation and review; the architecture, prompt, tests, and limitations are documented for discussion. No claim is made that the system understands every possible patient message.
+## Limits and configuration
+
+- Sessions, appointments, and handoffs live in process memory and reset when the server restarts. There is no real patient login, calendar integration, notification delivery, or medical advice.
+- Only fictional messages should be used. In Gemini mode, the current message, active draft, and up to eight recent messages are sent to Google. The API key stays on the server; `.env` is excluded from Git and the Docker image.
+- Free API quotas and capacity still apply. Google's [pricing](https://ai.google.dev/gemini-api/docs/pricing), [billing](https://ai.google.dev/gemini-api/docs/billing), and [rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) describe the account restrictions. Provider errors never silently switch the model or enable the offline baseline.
+- An optional OpenAI adapter uses the same extraction contract. Set `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_MODEL` to use it. It may incur API charges and has only been tested with a mock client.
+
+The main implementation is in `backend/app/engine.py`, the extraction prompt in `backend/app/prompts/extract.md`, and the interface in `frontend/src/App.tsx` and `frontend/src/styles.css`.

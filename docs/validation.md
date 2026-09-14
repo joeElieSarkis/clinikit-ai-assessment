@@ -33,7 +33,7 @@ Offline browser checks were completed on 12 September 2026; hosting checks follo
 
 ## Conversation recovery — 14 September 2026
 
-The reported conversation failed when the current day was Monday: the seeded visit was the following Monday, but the original-visit search resolved the bare weekday to today. A subsequent reference reply retained that failed date filter and repeated the same question.
+A regression occurred when the current day was Monday: the seeded visit was the following Monday, but the original-visit search resolved the bare weekday to today. A subsequent reference reply retained that failed date filter and repeated the same question.
 
 Regression tests now verify:
 
@@ -49,14 +49,14 @@ These regression checks use the offline interpreter or a mock provider, includin
 
 ## Provider recovery and live Flash-Lite checks — 15 September 2026
 
-- The reported held Friday booking followed by “Maya” was reproduced against Gemini 3.6 Flash. A diagnostic generation returned HTTP 503 `UNAVAILABLE`, with a high-demand explanation. This was a provider capacity failure, distinct from the earlier daily-quota response.
+- A held Friday booking followed by “Maya” failed against Gemini 3.6 Flash. A diagnostic generation returned HTTP 503 `UNAVAILABLE`, with a high-demand explanation. This was a provider capacity failure, distinct from the earlier daily-quota response.
 - Explicit doctor, date, time, and visible slot replies now fill an active request locally. Regression tests cover “Maya”, “Dr. Maya”, quoted names, ambiguous “4”, “4 pm”, and the nearest available alternative while preserving the hold. Compound corrections still use the configured model.
 - HTTP 502/503/504 can receive one extra attempt after one second, within a configured 20-second budget. Other errors do not automatically retry. A second 3.6 conversation still failed on explicit resume; the partial trace is retained in [gemini-conversation-results.json](gemini-conversation-results.json).
 - **Gemini 3.5 Flash-Lite completed all 12 conversation steps**, including a held enquiry, doctor/time clarification, a 17:00 alternative, explicit resume, booking confirmation, rescheduling, cancellation, and mock callback. It used **four model calls and four HTTP requests**. Every appointment change required confirmation, and the original Karim visit remained unchanged. The full trace is in [gemini-flash-lite-conversation-results.json](gemini-flash-lite-conversation-results.json).
 - Flash-Lite also matched **11/11 workflow intents** and **1/1 additional entity case** with **zero unconfirmed mutations**. This run covers ten supplied examples plus “pencil me in”, using ten model calls and one local handoff. See [gemini-flash-lite-assessment-results.json](gemini-flash-lite-assessment-results.json). The remaining nine extended cases were not rerun on the new model.
 - The default, example configuration, local model setting, and Render configuration now select `gemini-3.5-flash-lite` explicitly. Provider failure never switches to another model or the offline baseline.
 - A browser test with an explicitly labelled injected failure verified **Retry message**. A George/Monday/16:00 proposal was invalidated when “Actually, make it Wednesday” failed with a simulated 503. Clicking retry produced a new George/Wednesday/16:00 proposal, preserving doctor/time without changing any appointment. Tests also verify that a different new message does not inherit the suspended draft and that the old confirmation token stays invalid.
-- A separate browser check against the real Flash-Lite backend completed the reported “Book me Friday at 4 but don’t confirm anything yet” → “Maya” → “4 pm” → 17:00 slot sequence. The initial request used Gemini; bounded follow-ups stayed local. The UI requested am/pm, offered the nearby available times, and retained the hold after a slot click. No confirmation control or new appointment appeared.
+- A separate browser check against the real Flash-Lite backend completed “Book me Friday at 4 but don’t confirm anything yet” → “Maya” → “4 pm” → 17:00 slot selection. The initial request used Gemini; bounded follow-ups stayed local. The UI requested am/pm, offered the nearby available times, and retained the hold after a slot click. No confirmation control or new appointment appeared.
 - Errors expose safe diagnostic categories and HTTP status in the decision log; provider bodies and API keys are never displayed. Quota failures, timeouts, connection errors, invalid responses, and setup problems have distinct messages.
 
 ## Browser checks

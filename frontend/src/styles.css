@@ -1160,7 +1160,6 @@ button:hover:not(:disabled) {
   }
 }
 
-/* Keep the essential controls visible and legible on small screens. */
 .visit-actions button,
 .suggestions button,
 .slot-list button {

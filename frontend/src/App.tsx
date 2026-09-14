@@ -621,7 +621,7 @@ export default function App() {
         </div>
         <footer className="app-footer">
           <span>RECEPTION / CLINIKIT</span>
-          <span>A considered approach to care.</span>
+          <span>Appointment enquiries</span>
           <span>EXERCISE 01</span>
         </footer>
       </main>

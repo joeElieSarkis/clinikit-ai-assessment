@@ -1,4 +1,4 @@
-"""Reproduce assessment examples with a fixed Beirut clock and write real results."""
+"""Evaluate intent and entity extraction against a fixed Beirut clock."""
 import argparse
 from copy import deepcopy
 from hashlib import sha256
@@ -114,7 +114,7 @@ def main():
                      'response': session.messages[-1].content})
         print(f"{index + 1}/{len(cases)}: {decision.intent} | {decision.action} | {decision.source}", flush=True)
         if args.provider != 'demo' and decision.action == 'service_unavailable':
-            # Preserve the failure and stop; do not burn quota on an unavailable provider.
+            # Save a partial result rather than continue after a provider failure.
             break
     result = {'provider': args.provider, 'model': model, 'reference_time': reference.isoformat(),
               'prompt_sha256': sha256(provider.prompt.encode('utf-8')).hexdigest() if hasattr(provider, 'prompt') else None,
