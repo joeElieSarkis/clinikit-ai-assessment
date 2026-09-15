@@ -15,6 +15,8 @@ Checked locally on 15 September 2026 using the versions recorded in [results.jso
 
 The built site served Reception and `/attendance/` from the same FastAPI process. The hosting test verifies the report response as well as the application and asset routes.
 
+A later check found that Vite's development server returned Reception at `/attendance/`, despite the built FastAPI route working. The development configuration now resolves `/attendance` and `/attendance/` to the public report's explicit HTML path before Vite applies its single-page fallback. A frontend regression test starts the actual Vite server and checks both forms, query strings, the explicit HTML URL, and the Reception root. It passes with `npm --prefix frontend test`. Browser navigation from Reception to Part 2 and back was also verified on port 5173 after the fix.
+
 The report was inspected in a desktop browser viewport and at 390 × 844. Mobile navigation, section links, the return link, and the threshold explorer worked. Wide figures scroll within the page on narrow screens.
 
 At a validation threshold of zero, all 600 appointments were flagged and all 96 no-shows were found. At 100%, none were flagged and precision displayed as undefined. Restoring the evaluated threshold returned to 10%, with 355 appointments flagged and 72 no-shows found. The held-out test results stayed unchanged throughout.

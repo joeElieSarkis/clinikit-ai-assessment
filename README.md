@@ -86,6 +86,7 @@ Conversational evidence and its limits are in [Part 1 validation](docs/validatio
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
+npm --prefix frontend test
 npm --prefix frontend run build
 npm --prefix frontend run format:check
 ```
