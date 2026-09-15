@@ -19,7 +19,7 @@ py -3.12 -m venv .venv
 npm --prefix frontend ci
 ```
 
-On macOS/Linux, create the environment with `python3 -m venv .venv` and replace `.\.venv\Scripts\python.exe` with `.venv/bin/python` in the commands. Part 1 alone needs only `requirements-lock.txt`; ML libraries are not installed in the web deployment.
+On macOS/Linux, create the environment with `python3.12 -m venv .venv` and replace `.\.venv\Scripts\python.exe` with `.venv/bin/python` in the commands. Part 1 alone needs only `requirements-lock.txt`; ML libraries are not installed in the web deployment.
 
 Copy `.env.example` to `.env` on first setup. For live conversational interpretation:
 
@@ -74,6 +74,7 @@ The pipeline validates the data, keeps identical predictor profiles together, an
 | Live conversational examples | 11/11 workflow intents and 1/1 additional entity case; no unconfirmed mutations |
 | Live multi-turn conversation | Held booking, clarification, confirmation, rescheduling, cancellation, and mock handoff passed |
 | Part 2 tests | 11 passed |
+| Development report routing | Frontend integration test passed |
 | Selected attendance model | Logistic regression, calibrated using training-only predictions |
 | Held-out attendance ranking | Average precision **0.340** versus baseline **0.160**; ROC AUC **0.660** |
 | Attendance operating point | **75.0% recall**, **19.7% precision**, **366/600 appointments flagged** |
@@ -85,9 +86,9 @@ Conversational evidence and its limits are in [Part 1 validation](docs/validatio
 ## Checks and project tools
 
 ```powershell
+npm --prefix frontend run build
 .\.venv\Scripts\python.exe -m pytest -q
 npm --prefix frontend test
-npm --prefix frontend run build
 npm --prefix frontend run format:check
 ```
 

@@ -1,78 +1,64 @@
-# Part 1 · Approach and technical decisions
+# Part 1 · Approach
 
-## A constrained agent workflow
+The assistant uses an LLM to interpret messages and Python to validate requests, query the mock schedule, and apply confirmed changes. This keeps flexible language understanding separate from appointment state.
 
 ```mermaid
 flowchart LR
-    A[Patient message] --> B[Typed intent and entity extraction]
-    B --> C[Python policy and clinic facts]
-    C --> D[Clarify, answer, check availability, or hand off]
-    C --> E[Specific appointment proposal]
-    E --> F[Explicit patient confirmation]
-    F --> G[Recheck state and availability]
-    G --> H[Apply mock action and report actual result]
+    A[Patient message] --> B[Intent and entity extraction]
+    B --> C[Validate against clinic facts]
+    C --> D[Answer or clarify]
+    C --> E[Show an exact proposal]
+    E --> F[Patient confirms]
+    F --> G[Recheck availability and apply mock action]
 ```
 
-The LLM handles linguistic variation. Deterministic code handles authority and side effects. A small, explicit workflow is easier to test and explain than an open-ended tool-calling loop for six bounded clinic intents. The model cannot access the mutation methods. Actions are represented by real mock-tool results in the decision record.
+## Intent and structured information
 
-## Intent, entities, and prompting
+Gemini returns a Pydantic `Extraction` containing the intent, doctor, preferred date/time, original appointment date, reference, and hold/ambiguity flags. Missing fields stay null. The prompt separates the original and destination dates in a rescheduling request and preserves ambiguous times such as “4” for clarification.
 
-The default Gemini interpreter returns a Pydantic `Extraction`: intent, doctor, requested date/time, original appointment date, appointment reference, a hold flag, and an ambiguity flag. The optional OpenAI adapter uses the same contract. The prompt distinguishes a booking enquiry from an availability question and the original date from the destination when moving a visit. Missing fields stay null. It preserves “4” so the backend can ask for am/pm, and “after 5 pm” so availability uses a range rather than an invented exact time.
+The configured model is `gemini-3.5-flash-lite`. It completed the recorded live conversation; earlier 3.6 Flash requests encountered repeated service errors. This is a tested configuration for the assessment, not a broad model comparison. The optional OpenAI adapter uses the same extraction contract but has only been tested with a mock client.
 
-The prompt treats patient messages and conversation history as untrusted data. It includes the assessment’s difficult cases, but cannot itself guarantee resistance to every adversarial phrase. The structural protection is that **no chat response can execute an appointment mutation**. Even a plausible but incorrect extraction must pass validation and a patient-visible proposal.
+The model receives the active draft and at most eight recent messages as untrusted data. Schema-constrained output is validated locally. It has no booking tools and does not generate claims about completed actions. Python builds responses from clinic facts and actual mock-tool results.
 
-The default `gemini-3.5-flash-lite` has a documented free tier and completed the live booking/reschedule/cancel conversation. The earlier 2.5 Flash model rejected this new account, and 3.6 Flash later returned repeated HTTP 503 high-demand errors. These observations motivated an explicitly configured model change; there is no automatic model fallback. No broad model or latency comparison is claimed.
+The offline rule interpreter is an explicitly selected baseline. Greetings, explicit handoff requests, and bounded clarification replies can also be handled locally in Gemini mode. Free-form messages still use the configured model; failures never switch providers automatically.
 
-The REST adapter requests schema-constrained JSON, validates every field locally, and includes at most eight history messages. It uses a 20-second request budget and at most one additional attempt, after one second, for HTTP 502/503/504 when time remains. Quotas, access failures, timeouts, and invalid output are not automatically retried. A shared cooldown limits bursts and expands after quota errors. Safe categories distinguish daily limits, temporary rate limits, HTTP failures, timeouts, connection failures, and invalid output without revealing provider bodies or credentials. Billing is controlled by the Google project, not the model name in code.
+## Clarification and conversation state
 
-The offline interpreter is a transparent baseline: regular expressions, a few common spelling corrections, and conservative clarification. It supports the supplied English examples and common follow-ups. It is not a replacement for evaluating the real model on representative messages.
+Compatible replies fill the current draft. A different intent starts a new request. Doctors must match the directory; dates use `Asia/Beirut`; slots must exist in the mock schedule.
 
-## Why this does not use RAG
+For “Move my appointment from Monday to Wednesday,” Monday identifies the existing visit and Wednesday identifies the destination. A bare original weekday is matched against stored appointments. If two visits match, the assistant lists their doctors, dates, and times. A doctor name, time, list position, or reference can select one. Selection preserves the requested destination and never changes an appointment by itself.
 
-The assessment provides bounded clinic actions backed by a small structured mock directory and schedule. Direct tool queries return the required facts. A vector database would add retrieval uncertainty without a document corpus to justify it. If the product later includes clinic policies or patient instructions as documents, a separate retrieval step with citations could support those questions. Availability and appointment mutations would still use the scheduling service.
+Bare hours 1–12 require am/pm, while two-digit `HH:MM` is treated as 24-hour time. An unqualified destination weekday means its next occurrence, including today; “next Wednesday” means the following calendar week. “Next week” searches Monday through Saturday. Past dates, ambiguous numeric dates, and dates beyond the 90-day sample schedule require correction. Full dates and times appear before confirmation.
 
-## Missing and ambiguous information
+“My doctor” does not identify a doctor or imply access to a medical record. Missing information produces a question. Conflicting alternatives require a single choice. Requests such as “don’t confirm anything yet” remain on hold through subsequent clarification.
 
-Compatible follow-ups fill the active draft. A changed intent starts a separate request rather than inheriting unrelated appointment details. The backend validates doctors against the configured directory, identifies an existing visit in the current sample session, resolves dates in `Asia/Beirut`, and checks a fictional schedule.
+## Preventing incorrect changes
 
-An existing-visit search matches a bare weekday against the actual stored visits, including a visit next Monday when today is Monday. One match can be used directly. Multiple matches are listed with their doctors and full dates/times, and the patient can answer with a doctor, time, or list position. These selection details identify the original visit; they do not replace the requested rescheduling destination. A reference is also accepted, and a reference reply clears stale search criteria. Holds survive clarification, and every change still requires confirmation.
+- Messages can query or prepare a proposal; only the separate confirmation endpoint can mutate appointments.
+- Each confirmation token belongs to one session and exact proposal. A new message invalidates the old token, and proposals expire after ten minutes.
+- Confirmation rechecks availability and conflicts. Rescheduling retains the appointment reference; cancellation requires an active visit in the same session.
+- Per-session locks serialize changes. Request IDs prevent duplicate execution; reusing an ID with a different payload is rejected.
+- Holds are checked against both extracted fields and raw English text. Free-text “yes” does not confirm a visit.
+- Handoffs are mocked and explicitly say that no real call is triggered. Medical requests are directed to qualified help without a diagnosis.
 
-Greetings, incomplete single-character input, bounded appointment-selection replies, and explicit doctor/date/time details within an understood request are handled locally and labeled as local routing. They consume no provider requests. Compound and free-form requests still use Gemini. Saying hello preserves the active draft while invalidating any previous confirmation, as every new message does.
+On a provider failure, the proposal is invalidated and earlier details are suspended. **Retry message** restores those details only for the failed message; a different request cannot inherit them silently. Quota, timeout, connection, and setup errors have separate messages. The adapter makes at most one additional attempt for HTTP 502/503/504 within its request budget; quotas and invalid outputs are not automatically retried.
 
-After a provider failure, the old proposal is invalid and the draft is suspended. The user can explicitly retry the failed message; that retry restores previously validated details and reprocesses the message. A different new request cannot silently inherit the suspended draft. The Retry button uses a new request ID, while transport-level retries retain their ID for idempotency. A successful retry still needs a new, exact confirmation before changing a visit.
+## Tools and interface
 
-For a new appointment or rescheduling destination, an unqualified weekday means its next occurrence, including today. “Next Wednesday” means Wednesday in the following calendar week. “Next week” searches Monday through Saturday of the following week. Explicit past dates and dates beyond the 90-day demo horizon are rejected. Numeric dates with ambiguous month/day order require clarification. Two-digit `HH:MM` is treated as 24-hour time; bare hours 1–12 require am/pm. All selected slots are displayed as a full calendar date before confirmation. Existing-visit selection also accepts numbered list positions; an explicit time such as “10 am” identifies a time rather than a list position.
+The schedule and doctor directory are structured mock data, so direct function calls provide the required facts. There is no document corpus to justify RAG. A future clinic-policy document collection could use retrieval with citations, while scheduling would continue to use authoritative API data.
 
-Vague phrases such as “my doctor” never imply access to a medical record. Unknown doctors, conflicting options, unsupported time ranges, and unmatched appointment references produce questions. The mock patient is preselected so the assessment can demonstrate changes without adding a login system.
+React displays the conversation beside existing visits. The decision inspector exposes structured fields, checks, the next action, and mock-tool results. The interface supports keyboard submission, dialogs, reduced motion, and a collapsible mobile appointment list. Fonts are bundled locally.
 
-## Avoiding incorrect actions
+## Production changes
 
-- Every appointment mutation requires an opaque token tied to the current proposal, session, operation, and exact slot.
-- Every new message invalidates the previous proposal. Free-text “yes” cannot confirm it.
-- “Don’t book yet” and similar holds prevent a proposal; explicit holds are also checked against raw English text independently of the model.
-- Proposals expire after ten minutes. Confirmation rechecks the schedule and patient conflicts.
-- Per-session locks make rescheduling an atomic update, preserving the appointment reference. Messages and confirmations are idempotent by request ID. Reusing an ID with a different payload is rejected.
-- Existing records must belong to the current sample session. Separate sessions simulate separate patients and separate clinic sandboxes.
-- Responses are assembled from validated facts and actual execution results. A mock handoff never promises a real callback. Recognizable handoff and clinical requests can be routed locally during a provider outage.
+Sessions and appointments currently live in process memory and reset on restart. Each session is a separate sample clinic; the session identifier is not patient authentication. No real calendar, notification service, or medical record is connected.
 
-## Interface decisions
+A deployed clinical product would need patient authentication and authorization, persistent storage, transactional slot locking across patients, durable idempotency, an actual handoff queue, audit records, rate limits, and privacy controls. Clinical escalation rules would need qualified review. Evaluation should cover multilingual and adversarial messages, clarification and completion rates, incorrect proposals, unauthorized changes, latency, and cost on a separate test set.
 
-The conversation sits beside the appointment list so patients can refer to existing visits while typing. The decision inspector is available on demand. Native buttons, labeled inputs, keyboard submission, modal dialogs, reduced-motion support, and a collapsible mobile appointment list support usability. Fonts are bundled locally.
-
-## What production would need
-
-This local assessment intentionally uses ephemeral process memory, not a real clinic integration. Sessions expire after two hours and have bounded request counts; restarting the server discards them. The browser stores only the opaque session identifier in tab-scoped session storage. This identifier is a demo bearer capability, **not authentication**.
-
-Before real use: authenticate and authorize patients; use a persistent appointment service with transactional slot locking across all patients; integrate an actual handoff queue; add durable idempotency, audit events, consent and retention policies, rate limiting, observability, and secrets management. Add clinician-reviewed emergency routing, multilingual evaluation, and real holiday/provider schedules. Do not treat a short keyword list as medical triage.
-
-Evaluate intent accuracy, entity correctness, unnecessary clarification, unsafe proposal rate, unauthorized mutation rate, completion rate, latency, and cost on a held-out set with multi-turn and adversarial cases. Review failed transcripts; compare candidate models before choosing one. A claim of medical, security, or privacy compliance is outside this prototype’s evidence.
+See the [validation record](validation.md) for measured results and known gaps.
 
 ## References
 
-- [Gemini structured outputs](https://ai.google.dev/gemini-api/docs/structured-output): schema-constrained model output and local validation requirements.
-- [Gemini generateContent reference](https://ai.google.dev/api/generate-content): REST request and candidate response contract.
-- [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing) and [billing](https://ai.google.dev/gemini-api/docs/billing): free-tier model availability, quotas, and project billing.
-- [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs): schema-constrained extraction and Python parsing.
-- [GPT-4.1 mini model documentation](https://developers.openai.com/api/docs/models/gpt-4.1-mini): supported API features.
-- [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/): request-level tests with TestClient.
-- [Vite getting started](https://vite.dev/guide/): React development tooling and runtime requirements.
+- [Gemini structured outputs](https://ai.google.dev/gemini-api/docs/structured-output)
+- [Gemini generateContent API](https://ai.google.dev/api/generate-content)
+- [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/)

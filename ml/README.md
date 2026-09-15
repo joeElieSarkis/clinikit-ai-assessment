@@ -56,7 +56,7 @@ The original CSV and trained binary are excluded from Git. The original source f
 | `results/figures/` | SVG and PNG charts for review or export |
 | `results/example_predictions.csv` | Scores for the three invented inputs |
 
-The report can be rebuilt from saved results with `python -m ml.report`, without retraining or reading the source dataset.
+The report can be rebuilt from saved results with `.\.venv\Scripts\python.exe -m ml.report`, without retraining or reading the source dataset.
 
 ## Prediction contract
 
