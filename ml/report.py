@@ -12,10 +12,12 @@ INK, GREEN, RUST, PAPER = "#223c36", "#39705e", "#b85f3e", "#f7f5ef"
 
 
 def figure_file(fig, path):
-    fig.savefig(path.with_suffix(".svg"), bbox_inches="tight", facecolor=PAPER)
+    fig.savefig(path.with_suffix(".svg"), bbox_inches="tight", facecolor=PAPER, metadata={"Date": None})
     fig.savefig(path.with_suffix(".png"), dpi=180, bbox_inches="tight", facecolor=PAPER)
     plt.close(fig)
     text = path.with_suffix(".svg").read_text(encoding="utf-8")
+    text = "\n".join(line.rstrip() for line in text.splitlines()) + "\n"
+    path.with_suffix(".svg").write_text(text, encoding="utf-8", newline="\n")
     return text[text.index("<svg"):]
 
 
