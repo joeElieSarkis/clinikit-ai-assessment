@@ -1,0 +1,1292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="CliniKit appointment attendance study: model comparison, held-out evaluation, and validation threshold exploration."
+    />
+    <title>Appointment attendance — CliniKit</title>
+    <style>
+      :root {
+        --paper: #f7f5ef;
+        --ink: #223c36;
+        --muted: #52675e;
+        --green: #39705e;
+        --rust: #a84f31;
+        --line: #c9d0c5;
+        --soft: #e7ebe1;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          16px/1.65 system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      a {
+        color: inherit;
+        text-underline-offset: 4px;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button,
+      a,
+      input {
+        touch-action: manipulation;
+      }
+      :focus-visible {
+        outline: 3px solid var(--rust);
+        outline-offset: 5px;
+      }
+      header {
+        padding: 23px 5vw;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+      }
+      .wordmark {
+        font-size: 23px;
+        font-weight: 650;
+        letter-spacing: -1px;
+        text-decoration: none;
+      }
+      .wordmark b {
+        color: var(--rust);
+      }
+      header nav {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        font-size: 13px;
+      }
+      header nav a {
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+      }
+      header nav a:hover {
+        border-color: var(--green);
+      }
+      main {
+        max-width: 1190px;
+        margin: auto;
+        padding: 0 5vw;
+      }
+      h1,
+      h2,
+      h3,
+      p,
+      figure {
+        margin: 0;
+      }
+      h1,
+      h2 {
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 400;
+        letter-spacing: -0.04em;
+      }
+      h1 {
+        font-size: clamp(48px, 7vw, 92px);
+        line-height: 1.02;
+        max-width: 960px;
+      }
+      h2 {
+        font-size: clamp(32px, 4vw, 51px);
+        line-height: 1.13;
+        margin-bottom: 24px;
+      }
+      h3 {
+        font-size: 16px;
+        font-weight: 620;
+        margin-bottom: 14px;
+      }
+      .eyebrow {
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 2px;
+        font-weight: 650;
+        color: var(--muted);
+      }
+      .hero {
+        padding: 70px 0 53px;
+        position: relative;
+      }
+      .hero .eyebrow {
+        margin-bottom: 26px;
+      }
+      .hero-bottom {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 9vw;
+        margin-top: 30px;
+        align-items: end;
+      }
+      .lead {
+        font-size: 18px;
+        max-width: 600px;
+      }
+      .hero-data {
+        display: flex;
+        gap: 40px;
+        border-top: 1px solid var(--ink);
+        padding-top: 15px;
+      }
+      .hero-data strong {
+        font-family: Georgia, serif;
+        font-weight: 400;
+        font-size: 38px;
+        line-height: 1.2;
+        display: block;
+      }
+      .hero-data span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .contents {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        padding: 17px 0;
+        border-top: 1px solid var(--ink);
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .contents a {
+        text-decoration: none;
+      }
+      .contents a span {
+        color: var(--rust);
+        margin-right: 8px;
+      }
+      section {
+        padding: 60px 0;
+        border-bottom: 1px solid var(--line);
+        scroll-margin-top: 20px;
+      }
+      .section-title {
+        display: flex;
+        gap: 22px;
+        align-items: baseline;
+        margin-bottom: 8px;
+      }
+      .number {
+        color: var(--rust);
+        font: 13px/1 system-ui;
+        font-variant-numeric: tabular-nums;
+      }
+      .intro {
+        max-width: 720px;
+        color: var(--muted);
+        margin-bottom: 30px;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 50px;
+      }
+      .split.equal {
+        grid-template-columns: 1fr 1fr;
+      }
+      .split > *,
+      .explorer > * {
+        min-width: 0;
+      }
+      .note {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 16px;
+      }
+      .source {
+        font-size: 11px;
+        overflow-wrap: anywhere;
+        color: var(--muted);
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 13px;
+      }
+      th {
+        text-align: left;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 12px 14px 12px 0;
+        border-bottom: 1px solid var(--ink);
+      }
+      td {
+        padding: 14px 14px 14px 0;
+        border-bottom: 1px solid var(--line);
+        font-variant-numeric: tabular-nums;
+      }
+      td.num,
+      th.num {
+        text-align: right;
+      }
+      .selected td {
+        font-weight: 650;
+        color: var(--green);
+      }
+      .tag {
+        font-size: 10px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--rust);
+      }
+      .split-bar {
+        display: flex;
+        height: 7px;
+        gap: 3px;
+        margin: 20px 0;
+      }
+      .split-bar span:nth-child(1) {
+        background: var(--ink);
+        flex: 3;
+      }
+      .split-bar span:nth-child(2) {
+        background: #638773;
+        flex: 1;
+      }
+      .split-bar span:nth-child(3) {
+        background: #adbfa4;
+        flex: 1;
+      }
+      .split-legend {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+      }
+      .metric-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin-bottom: 32px;
+        border-top: 1px solid var(--ink);
+        border-bottom: 1px solid var(--line);
+      }
+      .metric {
+        padding: 23px 18px 23px 0;
+      }
+      .metric strong {
+        display: block;
+        font:
+          42px/1.2 Georgia,
+          serif;
+        letter-spacing: -1px;
+      }
+      .metric span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .metric small {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 5px;
+      }
+      figure svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      figcaption {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 12px;
+      }
+      .explorer {
+        display: grid;
+        grid-template-columns: 1fr 1.3fr;
+        gap: 50px;
+        background: var(--soft);
+        padding: 32px;
+        margin: 30px 0;
+      }
+      .threshold-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .threshold-line output {
+        font:
+          46px/1 Georgia,
+          serif;
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--green);
+        margin: 27px 0 10px;
+        cursor: pointer;
+      }
+      .range-ends {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .reset {
+        border: 0;
+        border-bottom: 1px solid var(--ink);
+        padding: 4px 0;
+        background: none;
+        color: var(--ink);
+        font-size: 12px;
+        cursor: pointer;
+        margin-top: 24px;
+      }
+      .explorer-numbers {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .explorer-numbers strong {
+        font:
+          34px/1.1 Georgia,
+          serif;
+        display: block;
+      }
+      .explorer-numbers span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .workload {
+        height: 16px;
+        background: #d0d8c9;
+        margin: 24px 0 12px;
+        display: flex;
+      }
+      .workload .found {
+        background: var(--green);
+      }
+      .workload .extra {
+        background: #bb8a6c;
+      }
+      .legend {
+        font-size: 11px;
+        color: var(--muted);
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .legend i {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        margin-right: 5px;
+      }
+      .matrix th,
+      .matrix td {
+        text-align: center;
+      }
+      .matrix td strong {
+        display: block;
+        font:
+          32px/1.2 Georgia,
+          serif;
+      }
+      .matrix td span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .matrix .missed {
+        color: var(--rust);
+      }
+      .examples {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        margin-top: 26px;
+      }
+      .example {
+        border-top: 2px solid var(--line);
+        padding-top: 16px;
+      }
+      .example strong {
+        font:
+          39px/1.2 Georgia,
+          serif;
+        display: block;
+        margin: 20px 0 5px;
+      }
+      .example h3 {
+        line-height: 1.45;
+      }
+      .example p {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .example .decision {
+        font-size: 12px;
+        color: var(--green);
+        margin-bottom: 15px;
+      }
+      .plain-list {
+        padding-left: 19px;
+        margin: 0;
+      }
+      .plain-list li {
+        padding-bottom: 12px;
+      }
+      footer {
+        max-width: 1190px;
+        margin: auto;
+        padding: 28px 5vw 50px;
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .print-button {
+        border: 1px solid var(--line);
+        padding: 8px 13px;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      details {
+        border-top: 1px solid var(--line);
+        padding-top: 15px;
+        margin-top: 28px;
+      }
+      summary {
+        cursor: pointer;
+        font-size: 13px;
+      }
+      details p {
+        margin: 15px 0;
+        font-size: 13px;
+      }
+      code {
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+      .footlinks {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+        font-size: 12px;
+      }
+      .callout {
+        border-left: 2px solid var(--rust);
+        padding-left: 18px;
+        font-size: 14px;
+        margin: 26px 0;
+        color: var(--muted);
+      }
+      .flow {
+        counter-reset: step;
+        padding: 0;
+        list-style: none;
+      }
+      .flow li {
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+        display: flex;
+        gap: 18px;
+      }
+      .flow li::before {
+        counter-increment: step;
+        content: "0" counter(step);
+        color: var(--rust);
+        font-size: 12px;
+        padding-top: 3px;
+      }
+      .flow strong {
+        display: block;
+        font-size: 14px;
+      }
+      .flow p {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .download {
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .noscript {
+        padding: 15px;
+        border-bottom: 1px solid var(--rust);
+      }
+      @media (max-width: 760px) {
+        .explorer-numbers strong {
+          font-size: 28px;
+        }
+        figure {
+          overflow-x: auto;
+        }
+        figure svg {
+          min-width: 550px;
+        }
+        figure.wide-chart svg {
+          min-width: 900px;
+        }
+        header {
+          padding: 18px 6vw;
+        }
+        header nav {
+          gap: 14px;
+        }
+        header nav .desktop {
+          display: none;
+        }
+        main {
+          padding: 0 6vw;
+        }
+        .hero {
+          padding: 42px 0 35px;
+        }
+        .hero-bottom,
+        .split,
+        .split.equal,
+        .explorer {
+          grid-template-columns: 1fr;
+          gap: 26px;
+        }
+        .hero-data {
+          gap: 50px;
+          margin-top: 8px;
+        }
+        .contents {
+          gap: 12px 18px;
+        }
+        section {
+          padding: 40px 0;
+        }
+        .section-title {
+          gap: 14px;
+        }
+        .metric strong {
+          font-size: 31px;
+        }
+        .metric {
+          padding-right: 8px;
+        }
+        .metric span {
+          font-size: 11px;
+        }
+        .explorer {
+          padding: 22px;
+        }
+        .examples {
+          grid-template-columns: 1fr;
+        }
+        .example {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 8px 20px;
+        }
+        .example h3 {
+          margin: 0;
+        }
+        .example strong {
+          grid-column: 2;
+          grid-row: 1;
+          margin: 0;
+        }
+        .example p {
+          grid-column: 1 / -1;
+        }
+        .example .decision {
+          margin: 0;
+          grid-column: 1 / -1;
+        }
+        .split-legend {
+          gap: 16px;
+        }
+        .table-wrap {
+          margin-right: -2vw;
+        }
+        footer {
+          padding: 25px 6vw;
+          flex-wrap: wrap;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      @media print {
+        header nav,
+        .contents,
+        .reset,
+        .print-button,
+        .download,
+        input[type="range"] {
+          display: none;
+        }
+        body {
+          font-size: 11px;
+        }
+        main {
+          max-width: none;
+          padding: 0;
+        }
+        .hero {
+          padding: 20px 0;
+        }
+        h1 {
+          font-size: 52px;
+        }
+        h2 {
+          font-size: 30px;
+        }
+        section {
+          padding: 25px 0;
+          break-inside: avoid;
+        }
+        .explorer {
+          background: none;
+          border: 1px solid var(--line);
+        }
+        figure {
+          break-inside: avoid;
+        }
+        footer {
+          padding: 20px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a class="wordmark" href="#top">clinikit<b>.</b></a>
+      <nav>
+        <a id="reception-link" href="/">← Reception</a
+        ><a href="#method" class="desktop">Method</a
+        ><button class="print-button" id="print">Print report</button>
+      </nav>
+    </header>
+    <main id="top">
+      <noscript
+        ><p class="noscript">
+          Enable JavaScript for the detailed tables and validation threshold
+          explorer. The figures and headline metrics remain visible.
+        </p></noscript
+      >
+      <div class="hero">
+        <p class="eyebrow">Appointment attendance · Exercise 02 · {{DATE}}</p>
+        <h1>Understanding<br />missed appointments.</h1>
+        <div class="hero-bottom">
+          <p class="lead">
+            A study of appointment history, a comparison of three classifiers,
+            and a tested operating point for staff-reviewed outreach.
+          </p>
+          <div class="hero-data">
+            <div>
+              <strong>{{TOTAL}}</strong
+              ><span>appointments in the supplied data</span>
+            </div>
+            <div>
+              <strong>{{PREVALENCE}}</strong><span>did not attend</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav class="contents" aria-label="Report sections">
+        <a href="#data"><span>01</span>The data</a
+        ><a href="#models"><span>02</span>Model comparison</a
+        ><a href="#results"><span>03</span>Test results</a
+        ><a href="#threshold"><span>04</span>Outreach trade-off</a
+        ><a href="#drivers"><span>05</span>Feature influence</a
+        ><a href="#method"><span>06</span>Product integration</a>
+      </nav>
+      <section id="data">
+        <div class="section-title">
+          <span class="number">01</span>
+          <h2>Start with the data.</h2>
+        </div>
+        <div class="split">
+          <div>
+            <p class="intro">
+              Each row represents an appointment. The target is
+              <code>no_show</code>: 1 means the patient did not attend; 0 means
+              they attended.
+            </p>
+            <div id="audit"></div>
+            <p class="note">
+              Appointment ID is excluded from prediction. Gender is reserved for
+              the subgroup audit. No patient identifier or calendar date is
+              available, so patient-level and temporal validation remain
+              untested.
+            </p>
+          </div>
+          <div>
+            <h3>Three separate partitions</h3>
+            <div class="split-bar" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="split-legend" id="splits"></div>
+            <p class="note">
+              Identical predictor profiles stay together. The model is selected
+              inside training folds; the outreach threshold is set on validation
+              data. The test set measures the frozen choice.
+            </p>
+            <p class="callout">
+              The prediction assumes reminder status is already known before the
+              visit. The data contains no timestamps to verify that assumption.
+            </p>
+          </div>
+        </div>
+        <figure class="wide-chart" style="margin-top: 35px">
+          {{CHART_EXPLORATION}}
+          <figcaption>
+            Exploration uses training rows only. Group sizes are shown because
+            high rates in small groups are unstable. These are associations, not
+            explanations of why a patient missed a visit.
+          </figcaption>
+        </figure>
+      </section>
+      <section id="models">
+        <div class="section-title">
+          <span class="number">02</span>
+          <h2>A baseline comes first.</h2>
+        </div>
+        <p class="intro">
+          A model predicting attendance for everyone looks accurate on this
+          imbalanced dataset. Average precision tests whether actual no-shows
+          tend to receive higher scores. Selection uses five-fold grouped
+          cross-validation on training data.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th class="num">Average precision</th>
+                <th class="num">ROC AUC</th>
+                <th class="num">Brier score ↓</th>
+              </tr>
+            </thead>
+            <tbody id="comparison"></tbody>
+          </table>
+        </div>
+        <p class="note">
+          AP is shown as the fold mean ± standard deviation. It is average
+          precision, not trapezoidal PR area. Higher AP and AUC are better;
+          lower Brier score is better. The selected model receives sigmoid
+          calibration from training-only out-of-fold predictions.
+        </p>
+      </section>
+      <section id="results">
+        <div class="section-title">
+          <span class="number">03</span>
+          <h2>The held-out result.</h2>
+        </div>
+        <p class="intro">
+          <strong>{{MODEL}}</strong>, evaluated at the frozen {{THRESHOLD}}
+          threshold. The intervals below describe sampling uncertainty for this
+          fitted model; they do not measure performance at another clinic.
+        </p>
+        <div class="metric-row">
+          <div class="metric">
+            <span>Average precision</span><strong>{{AP}}</strong
+            ><small id="ap-ci"></small>
+          </div>
+          <div class="metric">
+            <span>ROC AUC</span><strong>{{AUC}}</strong
+            ><small id="auc-ci"></small>
+          </div>
+          <div class="metric">
+            <span>No-show recall</span><strong id="test-recall">—</strong
+            ><small id="recall-ci"></small>
+          </div>
+        </div>
+        <div class="split equal">
+          <div>
+            <h3 id="test-population">Test appointments</h3>
+            <table class="matrix">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Attended</th>
+                  <th>Missed visit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th>Flagged</th>
+                  <td>
+                    <strong id="fp"></strong><span>unnecessary outreach</span>
+                  </td>
+                  <td>
+                    <strong id="tp"></strong><span>no-shows identified</span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>Not flagged</th>
+                  <td>
+                    <strong id="tn"></strong><span>attendees not flagged</span>
+                  </td>
+                  <td class="missed">
+                    <strong id="fn"></strong><span>no-shows missed</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="note">
+              “Flagged” means eligible for staff review in this demonstration.
+              It never changes an appointment or contacts a patient.
+            </p>
+          </div>
+          <div>
+            <h3>Thresholds answer different questions</h3>
+            <div id="test-summary"></div>
+            <p class="note">
+              The 75% recall target was chosen as a demonstration assumption on
+              validation data. Test recall may differ. A clinic would need to
+              agree a workload and evaluate whether outreach helps.
+            </p>
+          </div>
+        </div>
+        <figure class="wide-chart" style="margin-top: 36px">
+          {{CHART_RANKING}}
+          <figcaption>
+            Both curves use the held-out test set. The marked precision–recall
+            point uses the validation-selected threshold.
+          </figcaption>
+        </figure>
+      </section>
+      <section id="threshold">
+        <div class="section-title">
+          <span class="number">04</span>
+          <h2>Who gets flagged?</h2>
+        </div>
+        <p class="intro">
+          Lowering the threshold finds more missed visits and creates more
+          outreach work. Explore that trade-off on the
+          <strong>validation set</strong>. The test result above remains fixed.
+        </p>
+        <div class="explorer">
+          <div>
+            <div class="threshold-line">
+              <label for="threshold-input">Flag at or above</label
+              ><output id="threshold-value" for="threshold-input"
+                >{{THRESHOLD}}</output
+              >
+            </div>
+            <input
+              type="range"
+              id="threshold-input"
+              min="0"
+              max="100"
+              step="1"
+              value="0"
+            />
+            <div class="range-ends">
+              <span>0% · flag everyone</span><span>100%</span>
+            </div>
+            <button class="reset" id="reset-threshold">
+              Restore the evaluated threshold
+            </button>
+          </div>
+          <div aria-live="polite" aria-atomic="true">
+            <div class="explorer-numbers">
+              <div>
+                <strong id="live-recall"></strong><span>no-shows found</span>
+              </div>
+              <div>
+                <strong id="live-precision"></strong><span>precision</span>
+              </div>
+              <div>
+                <strong id="live-workload"></strong
+                ><span id="workload-label">appointments flagged</span>
+              </div>
+            </div>
+            <div class="workload" aria-hidden="true">
+              <span class="found" id="found-bar"></span
+              ><span class="extra" id="extra-bar"></span>
+            </div>
+            <div class="legend">
+              <span
+                ><i style="background: var(--green)"></i>No-shows flagged</span
+              ><span><i style="background: #bb8a6c"></i>Attendees flagged</span
+              ><span><i style="background: #d0d8c9"></i>Not flagged</span>
+            </div>
+            <p class="note" id="live-counts"></p>
+          </div>
+        </div>
+        <h3>Synthetic example predictions</h3>
+        <p class="note">
+          These three invented appointments demonstrate the saved model. They
+          are not test patients, observed outcomes, or evidence that changing a
+          feature would cause attendance to improve.
+        </p>
+        <div class="examples" id="examples"></div>
+      </section>
+      <section id="drivers">
+        <div class="section-title">
+          <span class="number">05</span>
+          <h2>What the model uses.</h2>
+        </div>
+        <div class="split">
+          <figure>
+            {{CHART_IMPORTANCE}}
+            <figcaption>
+              Validation permutation importance: average decrease in AP across
+              20 shuffles. Whiskers show shuffle standard deviation, not
+              confidence intervals. Correlated features can share predictive
+              information.
+            </figcaption>
+          </figure>
+          <div>
+            <h3>Check the probability estimates</h3>
+            <figure>
+              {{CHART_CALIBRATION}}
+              <figcaption>
+                Calibration compares predicted probabilities with observed test
+                rates. Six equal-count bins are descriptive; this sample does
+                not establish reliable individual probabilities.
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+        <details>
+          <summary>View the descriptive subgroup audit</summary>
+          <p>
+            Gender is excluded from model inputs. Age and other predictors can
+            still carry group differences. Small subgroup counts and the absence
+            of patient-level splits limit interpretation; these results do not
+            establish fairness.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Group</th>
+                  <th class="num">Appointments</th>
+                  <th class="num">No-shows</th>
+                  <th class="num">Recall</th>
+                  <th class="num">Precision</th>
+                  <th class="num">Flagged</th>
+                </tr>
+              </thead>
+              <tbody id="subgroups"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+      <section id="method">
+        <div class="section-title">
+          <span class="number">06</span>
+          <h2>From a score to a workflow.</h2>
+        </div>
+        <div class="split equal">
+          <div>
+            <ol class="flow">
+              <li>
+                <div>
+                  <strong>Validate the snapshot</strong>
+                  <p>
+                    Confirm that every predictor is available at scoring time
+                    and the historical counts exclude the current appointment.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>Score in shadow mode</strong>
+                  <p>
+                    A scheduled backend job loads the versioned model and
+                    records probability, threshold, model version, and time.
+                    Staff decisions continue unchanged.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>Review an outreach queue</strong>
+                  <p>
+                    After prospective validation, reception staff review
+                    suggested follow-ups within an agreed daily capacity. Scores
+                    do not restrict access to care.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>Measure the actual outcome</strong>
+                  <p>
+                    Monitor calibration, missed visits, contact workload,
+                    subgroup performance, and data drift. A controlled rollout
+                    is needed to measure the effect of outreach.
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </div>
+          <div>
+            <h3>Limits of this assessment</h3>
+            <ul class="plain-list">
+              <li>
+                The source has no patient ID, appointment date, event
+                timestamps, or external validation cohort.
+              </li>
+              <li>
+                Reminder status is an observed feature. Its model importance is
+                not an estimate of a reminder's causal effect.
+              </li>
+              <li>
+                Imputers and encoders support missing values and unseen
+                categories, but these conditions need monitoring in a real feed.
+              </li>
+              <li>
+                The model and threshold were selected before test evaluation.
+                The saved model was not refitted on validation or test rows.
+              </li>
+              <li>
+                This report contains aggregate results and synthetic examples.
+                It makes no model API calls and performs no patient outreach.
+              </li>
+            </ul>
+            <div class="footlinks">
+              <button class="print-button download" id="download">
+                Download metrics JSON</button
+              ><a
+                href="https://scikit-learn.org/stable/common_pitfalls.html"
+                target="_blank"
+                rel="noreferrer"
+                >Leakage prevention</a
+              ><a
+                href="https://scikit-learn.org/stable/modules/calibration.html"
+                target="_blank"
+                rel="noreferrer"
+                >Calibration</a
+              >
+            </div>
+            <p class="source" style="margin-top: 25px">
+              Source: employer-supplied CliniKit_NoShow_Dataset.csv<br />SHA-256:
+              <span id="dataset-hash"></span>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <span>CLINIKIT · AI TRAINEE ASSESSMENT · PART 02</span
+      ><span>Recorded evaluation · {{DATE}}</span>
+    </footer>
+    <script id="results-data" type="application/json">
+      {{RESULTS}}
+    </script>
+    <script>
+      const r = JSON.parse(document.getElementById("results-data").textContent);
+      const $ = (id) => document.getElementById(id),
+        pct = (x) => (100 * x).toFixed(1) + "%",
+        num = (x) => x.toFixed(3),
+        cell = (x) => "<td>" + x + "</td>",
+        esc = (s) =>
+          String(s).replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+      $("audit").innerHTML =
+        "<table><tbody>" +
+        [
+          ["Source rows", r.audit.rows.toLocaleString()],
+          [
+            "Missing values",
+            Object.values(r.audit.missing).reduce((a, b) => a + b, 0),
+          ],
+          ["Duplicate appointment IDs", r.audit.duplicate_ids],
+          [
+            "Inconsistent appointment histories",
+            r.audit.history_violations + r.audit.new_patient_history_violations,
+          ],
+          ["Repeated predictor rows", r.audit.repeated_predictor_rows],
+        ]
+          .map(
+            (row) =>
+              "<tr>" +
+              cell(row[0]) +
+              '<td class="num">' +
+              row[1] +
+              "</td></tr>",
+          )
+          .join("") +
+        "</tbody></table>";
+      $("splits").innerHTML = Object.entries(r.splits)
+        .map(
+          ([name, s]) =>
+            "<span><strong>" +
+            esc(name.charAt(0).toUpperCase() + name.slice(1)) +
+            "</strong><br>" +
+            s.n +
+            " rows<br>" +
+            s.no_shows +
+            " no-shows</span>",
+        )
+        .join("");
+      $("comparison").innerHTML = r.cv
+        .map(
+          (x) =>
+            '<tr class="' +
+            (x.name === r.selected_model ? "selected" : "") +
+            '"><td>' +
+            esc(x.name) +
+            (x.name === r.selected_model
+              ? ' <span class="tag">selected</span>'
+              : "") +
+            '</td><td class="num">' +
+            num(x.ap_mean) +
+            " ± " +
+            num(x.ap_std) +
+            '</td><td class="num">' +
+            num(x.auc_mean) +
+            '</td><td class="num">' +
+            num(x.brier_mean) +
+            "</td></tr>",
+        )
+        .join("");
+      [
+        ["ap-ci", "average_precision"],
+        ["auc-ci", "roc_auc"],
+        ["recall-ci", "recall"],
+      ].forEach(
+        ([id, key]) =>
+          ($(id).textContent =
+            "95% interval " +
+            r.test_intervals_95[key]
+              .map(key === "recall" ? pct : num)
+              .join(" – ")),
+      );
+      $("test-recall").textContent = pct(r.test.recall);
+      $("test-population").textContent =
+        r.test.n + " test appointments · " + r.test.positives + " no-shows";
+      ["tp", "fp", "tn", "fn"].forEach(
+        (key) => ($(key).textContent = r.test[key]),
+      );
+      $("test-summary").innerHTML =
+        "<table><thead><tr><th>Operating point</th><th>Recall</th><th>Precision</th><th>Flagged</th></tr></thead><tbody>" +
+        [
+          ["Frozen " + pct(r.threshold), r.test],
+          ["Default 50%", r.test_at_050],
+          ["Always attends", r.baseline],
+        ]
+          .map(
+            ([label, m]) =>
+              "<tr>" +
+              cell(label) +
+              cell(pct(m.recall)) +
+              cell(m.flagged ? pct(m.precision) : "n.a.") +
+              cell(m.flagged + "/" + m.n) +
+              "</tr>",
+          )
+          .join("") +
+        '</tbody></table><p class="note">At the frozen threshold, ' +
+        r.test.fp +
+        " attendees would receive unnecessary outreach and " +
+        r.test.fn +
+        " actual no-shows would be missed.</p>";
+      function updateThreshold() {
+        const i = Number($("threshold-input").value),
+          m = r.validation_thresholds[i];
+        $("threshold-value").textContent = i + "%";
+        $("live-recall").textContent = pct(m.recall);
+        $("live-precision").textContent = m.flagged ? pct(m.precision) : "—";
+        $("live-workload").textContent = m.flagged;
+        $("workload-label").textContent = "of " + m.n + " flagged";
+        $("found-bar").style.width = pct(m.tp / m.n);
+        $("extra-bar").style.width = pct(m.fp / m.n);
+        $("live-counts").textContent =
+          m.tp +
+          " of " +
+          m.positives +
+          " no-shows found; " +
+          m.fn +
+          " missed. " +
+          m.fp +
+          " attendees also flagged. " +
+          (i === Math.round(r.threshold * 100)
+            ? "This is the frozen validation operating point."
+            : "Exploration only; the recorded test threshold has not changed.");
+      }
+      $("threshold-input").value = Math.round(r.threshold * 100);
+      $("threshold-input").addEventListener("input", updateThreshold);
+      $("reset-threshold").addEventListener("click", () => {
+        $("threshold-input").value = Math.round(r.threshold * 100);
+        updateThreshold();
+      });
+      updateThreshold();
+      $("examples").innerHTML = r.examples
+        .map(
+          (x) =>
+            '<article class="example"><h3>' +
+            esc(x.example) +
+            "</h3><strong>" +
+            pct(x.probability) +
+            '</strong><p class="decision">' +
+            (x.flagged
+              ? "Flagged for staff review"
+              : "Below the outreach threshold") +
+            "</p><p>" +
+            x.inputs.age +
+            " years · " +
+            esc(x.inputs.appointment_type) +
+            " · " +
+            x.inputs.days_before_appointment +
+            "-day lead time · " +
+            x.inputs.previous_no_shows +
+            " of " +
+            x.inputs.previous_appointments +
+            " prior visits missed · reminder " +
+            (x.inputs.reminder_sent ? "sent" : "not sent") +
+            "</p></article>",
+        )
+        .join("");
+      $("subgroups").innerHTML = r.subgroups
+        .map(
+          (x) =>
+            "<tr>" +
+            cell(esc(x.group)) +
+            cell(x.n) +
+            cell(x.positives) +
+            cell(x.positives ? pct(x.recall) : "n.a.") +
+            cell(x.flagged ? pct(x.precision) : "n.a.") +
+            cell(pct(x.flagged_fraction)) +
+            "</tr>",
+        )
+        .join("");
+      $("dataset-hash").textContent = r.dataset_sha256;
+      $("print").addEventListener("click", () => window.print());
+      $("download").addEventListener("click", () => {
+        const url = URL.createObjectURL(
+            new Blob([JSON.stringify(r, null, 2)], {
+              type: "application/json",
+            }),
+          ),
+          a = document.createElement("a");
+        a.href = url;
+        a.download = "clinikit-attendance-results.json";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+      if (location.protocol === "file:") $("reception-link").hidden = true;
+    </script>
+  </body>
+</html>

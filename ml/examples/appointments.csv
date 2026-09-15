@@ -1,0 +1,4 @@
+example,age,appointment_type,days_before_appointment,previous_appointments,previous_no_shows,weekday,appointment_time,reminder_sent,new_patient
+Returning patient with short lead time,45,Follow-up,3,8,0,Tuesday,10:00-12:00,1,0
+New patient with longer lead time,29,New Consultation,25,0,0,Friday,16:00-18:00,0,1
+Returning patient with prior missed visits,34,Routine Check,18,6,3,Monday,18:00-20:00,1,0
