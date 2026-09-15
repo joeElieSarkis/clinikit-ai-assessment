@@ -23,6 +23,14 @@ No JavaScript errors were reported during these checks. The embedded browser did
 
 ## Scope of the evidence
 
+### Committed-source reproduction
+
+A separate copy exported from Git commit `ddff7b4` was checked without the local `.env`, source CSV, saved model, or frontend build. It used the installed, pinned Python environment; this was not a fresh dependency installation.
+
+Training from that copy, with the employer's CSV supplied through `--data`, reproduced the selected model, threshold, split hashes, candidate cross-validation scores, validation and test metrics, bootstrap intervals, curves, and synthetic example predictions exactly. The batch inference command also completed using the newly trained artifact. Runtime, generation time, and byte-level source hashes were not compared; Git normalizes source line endings on export.
+
+The committed-source test run completed with **161 passed and one skipped**. The skip was the built-frontend hosting check because `frontend/dist/` is intentionally absent from Git; that check passed in the earlier complete 162-test run. No test required the employer's dataset or a real API key.
+
 These checks establish implementation behavior and reproducibility, not suitability for clinical use. The test result remains modest: AP 0.340, ROC AUC 0.660, 75% recall, and 19.7% precision. The high outreach workload, feature timing assumptions, missing patient identifiers, and sampling uncertainty are discussed in the [model card](model-card.md).
 
 No public deployment or Docker build has been verified. Training and prediction run locally; the web report makes no model API calls and performs no outreach.
