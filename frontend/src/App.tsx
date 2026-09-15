@@ -245,6 +245,10 @@ export default function App() {
             <MessageCircle size={18} />
             Reception<span>01</span>
           </div>
+          <a className="nav-report" href="/attendance/">
+            <ArrowUpRight size={18} />
+            Attendance study<span>02</span>
+          </a>
         </div>
         <div className="brand-statement">
           <span className="small-cross">✳</span>
@@ -272,6 +276,9 @@ export default function App() {
             CliniKit <span>/</span> Reception
           </div>
           <div className="topbar-actions">
+            <a className="mobile-report-link" href="/attendance/">
+              Part 2
+            </a>
             <span className="mode-badge">{modeLabel}</span>
             <button
               className="icon-button"

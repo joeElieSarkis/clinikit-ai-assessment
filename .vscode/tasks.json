@@ -2,15 +2,48 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Run reception", "type": "process", "command": "${workspaceFolder}/.venv/bin/python",
+      "label": "Run reception",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
       "windows": { "command": "${workspaceFolder}/.venv/Scripts/python.exe" },
-      "args": ["run.py"], "problemMatcher": [], "isBackground": true,
+      "args": ["run.py"],
+      "problemMatcher": [],
+      "isBackground": true,
       "presentation": { "reveal": "always", "panel": "dedicated" }
     },
     {
-      "label": "Test reception", "type": "process", "command": "${workspaceFolder}/.venv/bin/python",
+      "label": "Test reception",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
       "windows": { "command": "${workspaceFolder}/.venv/Scripts/python.exe" },
-      "args": ["-m", "pytest", "-q"], "problemMatcher": [], "group": "test"
+      "args": ["-m", "pytest", "backend/tests", "-q"],
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "Train attendance model",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": { "command": "${workspaceFolder}/.venv/Scripts/python.exe" },
+      "args": ["-m", "ml.train"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Predict example appointments",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": { "command": "${workspaceFolder}/.venv/Scripts/python.exe" },
+      "args": ["-m", "ml.predict", "--input", "ml/examples/appointments.csv"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Test assessment",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": { "command": "${workspaceFolder}/.venv/Scripts/python.exe" },
+      "args": ["-m", "pytest", "-q"],
+      "problemMatcher": [],
+      "group": "test"
     }
   ]
 }

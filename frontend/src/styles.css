@@ -118,6 +118,36 @@ button:hover:not(:disabled) {
   font-size: 12px;
   color: #bdcabe;
 }
+.nav-report {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  color: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  opacity: 0.82;
+}
+.nav-report:hover {
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.nav-report > span {
+  margin-left: auto;
+  font-size: 10px;
+}
+.mobile-report-link {
+  display: none;
+  color: var(--ink);
+  font-size: 12px;
+  text-underline-offset: 3px;
+}
+@media (max-width: 1050px) {
+  .mobile-report-link {
+    display: inline;
+  }
+}
 .brand-statement {
   margin-top: auto;
   padding-top: 95px;

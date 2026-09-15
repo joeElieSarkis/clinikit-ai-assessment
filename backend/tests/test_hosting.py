@@ -43,5 +43,8 @@ def test_built_frontend_and_api_share_one_server(engine):
     assert script is not None
     assert client.get(script[1]).status_code == 200
     assert client.get("/api/health").json()['status'] == 'ok'
+    report = client.get("/attendance/")
+    assert report.status_code == 200
+    assert 'Appointment attendance' in report.text and 'results-data' in report.text
     assert client.get("/.env").status_code == 404
     assert client.get("/backend/app/main.py").status_code == 404

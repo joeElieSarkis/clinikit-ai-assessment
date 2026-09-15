@@ -1,4 +1,4 @@
-# Approach and technical decisions
+# Part 1 · Approach and technical decisions
 
 ## A constrained agent workflow
 

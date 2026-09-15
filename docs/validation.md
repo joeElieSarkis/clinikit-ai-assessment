@@ -1,4 +1,4 @@
-# Validation record
+# Part 1 · Validation record
 
 Offline browser checks were completed on 12 September 2026; hosting checks followed on 13 September, and live Gemini checks on 14–15 September. The Python suite uses fixed reference times of **2026-09-12 11:00** and **2026-09-14 14:00, Asia/Beirut**. The Monday clock reproduces a real conversation failure that the original Saturday fixture missed. Live conversation evaluation uses the current Beirut time; the retry browser fixture uses a fixed Monday clock.
 

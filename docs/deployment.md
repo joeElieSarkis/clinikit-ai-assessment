@@ -1,6 +1,6 @@
 # Free demo deployment
 
-This configuration runs the React interface and Python API together as one Render **Free** web service. The source code can live in a GitHub repository. Reviewers receive one HTTPS link and do not need to install anything or keep the developer's laptop running.
+This configuration runs the React interface, Python API, and static Part 2 attendance report together as one Render **Free** web service. The source code can live in a GitHub repository. Reviewers receive one HTTPS link and do not need to install anything or keep the developer's laptop running. Model training remains a local command; the web service needs no ML libraries or source dataset.
 
 ## GitHub Pages and this project
 
@@ -45,5 +45,6 @@ Appointments and sessions are intentionally held in memory. Sleeping, restarting
 3. Ask opening hours. Book an available weekday slot, confirm it, then reschedule and cancel the sample appointment using the explicit confirmation controls.
 4. Send “I might want to see Dr. George tomorrow at 4, but don't book anything yet.” Confirm no appointment changes without approval; the response can ask for clarification or explain a closed date.
 5. Open the site on a phone and check the composer and visit disclosure. Refresh during an active session and check it still loads.
+6. Open **Attendance study** (or **Part 2** on mobile). Check that `/attendance/` shows the recorded ML results and the validation threshold slider updates its counts without changing the test result.
 
 The production frontend build and Python hosting checks passed locally. A Docker build and public deployment have not yet been verified. After deployment, record the actual URL, date, and observed checks in `docs/validation.md`.
