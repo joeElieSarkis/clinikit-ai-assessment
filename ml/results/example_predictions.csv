@@ -1,0 +1,4 @@
+example,probability,flagged
+Returning patient with short lead time,0.06430768190262508,False
+New patient with longer lead time,0.37485233777025423,True
+Returning patient with prior missed visits,0.3717228178083697,True
